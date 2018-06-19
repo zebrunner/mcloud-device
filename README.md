@@ -1,2 +1,5 @@
 # appium-device
-Android, Appium and STF provider in Docker.
+Docker image used by Infrappium for Android devices in MCloud.
+* Android SDK
+* Appium
+* STF provider
