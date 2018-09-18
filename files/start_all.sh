@@ -17,7 +17,7 @@ ln -s /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
     & $WEBSOCKIFY_CMD \
     & stf provider --name "$DEVICEUDID" --min-port=$MIN_PORT --max-port=$MAX_PORT \
         --connect-sub tcp://$STF_PRIVATE_HOST:$STF_TCP_SUB_PORT --connect-push tcp://$STF_PRIVATE_HOST:$STF_TCP_PUB_PORT \
-        --group-timeout 3600 --public-ip $STF_PUBLIC_HOST --storage-url https://$STF_PUBLIC_HOST/ \
+        --group-timeout 3600 --public-ip $STF_PUBLIC_HOST --storage-url https://$STF_PUBLIC_HOST/ --screen-jpeg-quality 40 \
         --heartbeat-interval 10000 --vnc-initial-size 600x800 --vnc-port 5900 --no-cleanup --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_PRIVATE_HOST}/<%= serial %>/<%= publicPort %>/" &
 
 while true
