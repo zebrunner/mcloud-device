@@ -56,7 +56,7 @@ else
     DISPLAYSIZE=7
 fi
 
-if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8*  ]]
+if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8*  ]] || [[ ${ANDROID_VERSION} == 9*  ]]
 then
     export AUTOMATION_NAME='uiautomator2'
 else
