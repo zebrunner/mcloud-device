@@ -60,7 +60,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     libgconf-2-4 \
 
 
-# Install 10.x node and npm (6.4.1)
+# Install 8.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - \
     && apt-get -qqy install nodejs \
 
