@@ -57,12 +57,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     python build-essential  \
     libgtk2.0-0:i386 \
     libnss3-dev \
-    libgconf-2-4
+    libgconf-2-4 \
 
 
 # Install 10.x node and npm (6.4.1)
-RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash - \
-    && apt-get install -y nodejs
+    && curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - \
+    && apt-get -qqy install nodejs \
 
 ## Install nodejs
 #    && cd /tmp \
@@ -72,9 +72,9 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash - \
 #    && rm node-v*.tar.xz  \
 
 # Install STF dependencies
-RUN su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
-    && apt-get update \
-    && apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
+    && su stf-build -s /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
+    && apt-get -qqy update \
+    && apt-get -qqy install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
     && apt-get clean \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
 
@@ -83,17 +83,18 @@ RUN su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/n
     && chmod +x /opt/configgen.sh
 
 # Install add-apt-repository and ffmpeg
-RUN apt-get install -y software-properties-common \
+RUN apt-get -qqy update \
+    && apt-get -qqy install software-properties-common \
     && add-apt-repository ppa:mc3man/trusty-media \
-    && apt-get update \
-    && apt-get dist-upgrade \
-    && apt-get install ffmpeg
+    && apt-get -qqy update \
+    && apt-get -qqy dist-upgrade \
+    && apt-get -qqy install ffmpeg
 
 # Clone STF
 RUN git clone https://github.com/qaprosoft/stf.git /opt/stf
 
 # Give permissions to our build user.
-RUN chown -R stf-build:stf-build /opt /app
+RUN chown -R stf-build:stf-build /opt /app /usr/lib/node_modules/npm /var/lib/apt
 
 # Switch over to the build user.
 USER stf-build
