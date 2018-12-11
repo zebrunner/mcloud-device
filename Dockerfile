@@ -35,9 +35,6 @@ RUN mkdir -p /opt/apk
 RUN mkdir -p /var/lib/jenkins/workspace
 RUN mkdir -p /app
 
-# Update npm
-RUN npm install -g npm@latest
-
 RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
       --create-home \
