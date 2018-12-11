@@ -35,6 +35,9 @@ RUN mkdir -p /opt/apk
 RUN mkdir -p /var/lib/jenkins/workspace
 RUN mkdir -p /app
 
+# Update npm
+RUN npm install -g npm@latest
+
 RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
       --create-home \
@@ -72,9 +75,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     && apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
     && apt-get clean \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
-
-# Update npm
-    && npm install -g npm@latest \
 
 # Reload cache after add location of graphic libraries
     && ldconfig -v \
