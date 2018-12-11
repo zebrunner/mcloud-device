@@ -62,7 +62,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Install nodejs
     && cd /tmp \
     && wget --progress=dot:mega \
-      https://nodejs.org/dist/v6.11.2/node-v6.11.2-linux-x64.tar.xz \
+      https://nodejs.org/dist/v8.11.2/node-v8.11.2-linux-x64.tar.xz \
     && tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local \
     && rm node-v*.tar.xz  \
 
@@ -72,6 +72,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     && apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
     && apt-get clean \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
+
+# Update npm
+    && npm install -g npm@latest \
 
 # Reload cache after add location of graphic libraries
     && ldconfig -v \
