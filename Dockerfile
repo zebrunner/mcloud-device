@@ -57,17 +57,22 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     python build-essential  \
     libgtk2.0-0:i386 \
     libnss3-dev \
-    libgconf-2-4 \
+    libgconf-2-4
 
-# Install nodejs
-    && cd /tmp \
-    && wget --progress=dot:mega \
-      https://nodejs.org/dist/v8.11.2/node-v8.11.2-linux-x64.tar.xz \
-    && tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local \
-    && rm node-v*.tar.xz  \
+
+# Install 10.x node and npm (6.4.1)
+RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash - \
+    && apt-get install -y nodejs
+
+## Install nodejs
+#    && cd /tmp \
+#    && wget --progress=dot:mega \
+#      https://nodejs.org/dist/v8.11.2/node-v8.11.2-linux-x64.tar.xz \
+#    && tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local \
+#    && rm node-v*.tar.xz  \
 
 # Install STF dependencies
-    && su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
+RUN su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
     && apt-get update \
     && apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
     && apt-get clean \
@@ -76,6 +81,13 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Reload cache after add location of graphic libraries
     && ldconfig -v \
     && chmod +x /opt/configgen.sh
+
+# Install add-apt-repository and ffmpeg
+RUN apt-get install -y software-properties-common \
+    && add-apt-repository ppa:mc3man/trusty-media \
+    && apt-get update \
+    && apt-get dist-upgrade \
+    && apt-get install ffmpeg
 
 # Clone STF
 RUN git clone https://github.com/qaprosoft/stf.git /opt/stf
