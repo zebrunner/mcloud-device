@@ -58,6 +58,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     libgtk2.0-0:i386 \
     libnss3-dev \
     libgconf-2-4 \
+    dnsutils \
 
 
 # Install 8.x node and npm (6.x)
