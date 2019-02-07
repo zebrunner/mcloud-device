@@ -15,7 +15,8 @@ if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
     WEB_PROTOCOL=https
 fi
 
-ln $WEBSOCKIFY_CMD \
+ln -s /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
+    & $WEBSOCKIFY_CMD \
     & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID \
            --nodeconfig /opt/nodeconfig.json --automation-name $AUTOMATION_NAME \
     & stf provider --name "$DEVICEUDID" --min-port=$MIN_PORT --max-port=$MAX_PORT \
