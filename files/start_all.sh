@@ -15,7 +15,7 @@ if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
     WEB_PROTOCOL=https
 fi
 
-ln -s /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
+ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
     & $WEBSOCKIFY_CMD \
     & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID \
            --nodeconfig /opt/nodeconfig.json --automation-name $AUTOMATION_NAME \
