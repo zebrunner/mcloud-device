@@ -9,6 +9,12 @@ WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900"
 SOCKET_PROTOCOL=ws
 WEB_PROTOCOL=http
 
+# uninstall appium specific
+adb uninstall io.appium.uiautomator2.server.test
+adb uninstall io.appium.uiautomator2.server
+adb uninstall io.appium.settings
+adb uninstall io.appium.unlock
+
 if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
     WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
     SOCKET_PROTOCOL=wss
