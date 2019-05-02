@@ -59,6 +59,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     libnss3-dev \
     libgconf-2-4 \
     dnsutils \
+    telnet \
+    net-tools \
 
 
 # Install 8.x node and npm (6.x)
