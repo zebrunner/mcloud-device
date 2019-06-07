@@ -88,9 +88,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Install add-apt-repository and ffmpeg
 RUN apt-get -qqy update \
     && apt-get -qqy install software-properties-common \
-    && add-apt-repository ppa:mc3man/trusty-media \
+    && add-apt-repository ppa:jonathonf/ffmpeg-4 \
     && apt-get -qqy update \
-    && apt-get -qqy dist-upgrade \
     && apt-get -qqy install ffmpeg
 
 # Clone STF
