@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 ENV ANDROID_HOME /opt/android-sdk-linux
 ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools:$PATH
@@ -64,7 +64,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 
 # Install 8.x node and npm (6.x)
-    && curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - \
+    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get -qqy install nodejs \
 
 ## Install nodejs
@@ -88,9 +88,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Install add-apt-repository and ffmpeg
 RUN apt-get -qqy update \
     && apt-get -qqy install software-properties-common \
-    && add-apt-repository ppa:mc3man/trusty-media \
+    && add-apt-repository ppa:jonathonf/ffmpeg-4 \
     && apt-get -qqy update \
-    && apt-get -qqy dist-upgrade \
     && apt-get -qqy install ffmpeg
 
 # Clone STF
