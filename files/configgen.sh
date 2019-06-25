@@ -95,6 +95,7 @@ cat << EndOfMessage
     "host": "${HOST}",
     "hubHost": "${SELENIUM_HUB_HOST}",
     "hubPort": ${SELENIUM_HUB_PORT},
+    "maxSession": 1,
     "register": true,
     "registerCycle": 5000,
     "cleanUpCycle": 5000,
