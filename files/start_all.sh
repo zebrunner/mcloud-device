@@ -21,8 +21,6 @@ if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
     WEB_PROTOCOL=https
 fi
 
-export NODE_OPTIONS="--max_old_space_size=8172"
-
 ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
     & $WEBSOCKIFY_CMD \
     & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID \
