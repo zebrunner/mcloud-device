@@ -23,7 +23,7 @@ fi
 
 ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
     & $WEBSOCKIFY_CMD \
-    & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID --relaxed-security $APPIUM_RELAXED_SECURITY \
+    & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID $APPIUM_RELAXED_SECURITY \
            --nodeconfig /opt/nodeconfig.json --automation-name $AUTOMATION_NAME --log-level $APPIUM_LOG_LEVEL \
     & stf provider --name "$DEVICEUDID" --min-port=$MIN_PORT --max-port=$MAX_PORT \
         --connect-sub tcp://$STF_PRIVATE_HOST:$STF_TCP_SUB_PORT --connect-push tcp://$STF_PRIVATE_HOST:$STF_TCP_PUB_PORT \
@@ -45,16 +45,12 @@ while true
     if [ ! "$ADB_STATUS" -eq "1" ]; then
         echo adb server is dead. restarting container...
         exit -1
-    else
-        echo adb service is alive.
     fi
 
     STFPROVIDER_STATUS=$(ps -ef | grep -v "grep" | grep -c "stf provider")
     if [ ! "$STFPROVIDER_STATUS" -eq "1" ]; then
       echo "stf provider is dead. reastarting container...
       exit -1
-    else
-      echo stf provider is alive.
     fi
 
 
@@ -62,7 +58,5 @@ while true
     if [ ! "$APPIUM_STATUS" -eq "1" ]; then
       echo "appium provider is dead. reastarting container...
       exit -1
-    else
-      echo appium is alive.
     fi
   done
