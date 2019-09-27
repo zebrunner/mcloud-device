@@ -23,7 +23,7 @@ fi
 
 ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
     & $WEBSOCKIFY_CMD \
-    & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID \
+    & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID --relaxed-security $APPIUM_RELAXED_SECURITY \
            --nodeconfig /opt/nodeconfig.json --automation-name $AUTOMATION_NAME --log-level $APPIUM_LOG_LEVEL \
     & stf provider --name "$DEVICEUDID" --min-port=$MIN_PORT --max-port=$MAX_PORT \
         --connect-sub tcp://$STF_PRIVATE_HOST:$STF_TCP_SUB_PORT --connect-push tcp://$STF_PRIVATE_HOST:$STF_TCP_PUB_PORT \
