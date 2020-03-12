@@ -15,6 +15,12 @@ adb uninstall io.appium.uiautomator2.server
 adb uninstall io.appium.settings
 adb uninstall io.appium.unlock
 
+# Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
+if [ -z "${STF_HOST_PROVIDER}" ]; then
+      #STF_HOST_PROVIDER is empty
+      STF_HOST_PROVIDER=${STF_PRIVATE_HOST}
+fi
+
 if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
     WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
     SOCKET_PROTOCOL=wss
@@ -22,13 +28,13 @@ if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
 fi
 
 ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
-    & $WEBSOCKIFY_CMD \
-    & node /opt/appium/ -p $PORT --log-timestamp --session-override --udid $DEVICEUDID $APPIUM_RELAXED_SECURITY \
-           --nodeconfig /opt/nodeconfig.json --automation-name $AUTOMATION_NAME --log-level $APPIUM_LOG_LEVEL \
-    & stf provider --name "$DEVICEUDID" --min-port=$MIN_PORT --max-port=$MAX_PORT \
-        --connect-sub tcp://$STF_PRIVATE_HOST:$STF_TCP_SUB_PORT --connect-push tcp://$STF_PRIVATE_HOST:$STF_TCP_PUB_PORT \
-        --group-timeout 3600 --public-ip $STF_PUBLIC_HOST --storage-url $WEB_PROTOCOL://$STF_PUBLIC_HOST/ --screen-jpeg-quality 40 \
-        --heartbeat-interval 10000 --vnc-initial-size 600x800 --vnc-port 5900 --no-cleanup --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
+    & ${WEBSOCKIFY_CMD} \
+    & node /opt/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
+           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} \
+    & stf provider --name "${DEVICEUDID}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
+        --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
+        --group-timeout 3600 --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ --screen-jpeg-quality 40 \
+        --heartbeat-interval 10000 --vnc-initial-size 600x800 --vnc-port 5900 --no-cleanup --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" &
 
 while true
   do
