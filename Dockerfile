@@ -63,7 +63,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     dnsutils \
     telnet \
     net-tools \
-
+    nano \
 
 # Install 8.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
