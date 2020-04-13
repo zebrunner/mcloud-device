@@ -74,7 +74,6 @@ cat << EndOfMessage
   "capabilities":
       [
         {
-          "browserName": "${DEVICENAME}",
           "version":"${ANDROID_VERSION}",
           "maxInstances": 1,
           "platform":"ANDROID",
