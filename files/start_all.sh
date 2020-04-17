@@ -15,6 +15,9 @@ adb uninstall io.appium.uiautomator2.server
 adb uninstall io.appium.settings
 adb uninstall io.appium.unlock
 
+# provide execute permissions to chromedrivers on startup
+chmod -R a+x /opt/appium/node_modules/appium-chromedriver/chromedriver/linux
+
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_HOST_PROVIDER_PUBLIC}" ]; then
       #STF_HOST_PROVIDER_PUBLIC is empty
