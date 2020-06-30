@@ -12,6 +12,7 @@ done
 
 # device type
 isTablet=`adb shell getprop ro.build.characteristics | grep tablet`
+isTv=`adb shell getprop ro.build.characteristics | grep tv`
 
 # abi
 arm=`adb shell getprop ro.product.cpu.abi | grep arm`
@@ -40,6 +41,8 @@ fi
 if [[ $isTablet ]]
 then
     DEVICETYPE='Tablet'
+elif [[ $isTv ]]
+    DEVICETYPE='TV'
 else
     DEVICETYPE='Phone'
 fi
