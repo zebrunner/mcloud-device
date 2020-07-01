@@ -42,6 +42,7 @@ if [[ $isTablet ]]
 then
     DEVICETYPE='Tablet'
 elif [[ $isTv ]]
+then
     DEVICETYPE='TV'
 else
     DEVICETYPE='Phone'
