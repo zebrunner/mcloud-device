@@ -10,11 +10,12 @@ SOCKET_PROTOCOL=ws
 WEB_PROTOCOL=http
 
 # uninstall appium specific
-#TODO: redirect stdout/stderr to /dev/null
-adb uninstall io.appium.uiautomator2.server.test
-adb uninstall io.appium.uiautomator2.server
-adb uninstall io.appium.settings
-adb uninstall io.appium.unlock
+echo "uninstalling io.appium.* apps..."
+adb uninstall io.appium.uiautomator2.server.test > /dev/null & 2>&1
+adb uninstall io.appium.uiautomator2.server > /dev/null & 2>&1
+adb uninstall io.appium.settings > /dev/null & 2>&1
+adb uninstall io.appium.unlock > /dev/null & 2>&1
+echo "io.appium.* apps uninstalled."
 
 # provide execute permissions to chromedrivers on startup
 chmod -R a+x /opt/appium/node_modules/appium-chromedriver/chromedriver/linux
