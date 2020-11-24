@@ -1,5 +1,5 @@
-# appium-device
-Docker image used by Infrappium for Android devices in MCloud.
-* Android SDK
+# android-device
+Docker image used by Zebrunner Device Farm.
 * Appium
 * STF provider
+* Websockify
