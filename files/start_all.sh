@@ -10,10 +10,12 @@ SOCKET_PROTOCOL=ws
 WEB_PROTOCOL=http
 
 # uninstall appium specific
-adb uninstall io.appium.uiautomator2.server.test
-adb uninstall io.appium.uiautomator2.server
-adb uninstall io.appium.settings
-adb uninstall io.appium.unlock
+echo "uninstalling io.appium.* apps..."
+adb uninstall io.appium.uiautomator2.server.test > /dev/null & 2>&1
+adb uninstall io.appium.uiautomator2.server > /dev/null & 2>&1
+adb uninstall io.appium.settings > /dev/null & 2>&1
+adb uninstall io.appium.unlock > /dev/null & 2>&1
+echo "io.appium.* apps uninstalled."
 
 # provide execute permissions to chromedrivers on startup
 chmod -R a+x /opt/appium/node_modules/appium-chromedriver/chromedriver/linux
@@ -38,11 +40,16 @@ fi
 # set of ports which must be accessible from client network!
 STF_APPIUM_PORT=$((MIN_PORT+3))
 
-ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java \
-    & ${WEBSOCKIFY_CMD} \
-    & node /opt/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
-           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} \
-    & stf provider --name "${DEVICEUDID}" --device-name "${DEVICENAME}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
+ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
+${WEBSOCKIFY_CMD} &
+npm link --force node@10
+node --version
+node /opt/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
+           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
+sleep 5
+npm link --force node@8
+node --version
+stf provider --name "${DEVICEUDID}" --device-name "${DEVICENAME}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
         --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
         --group-timeout 3600 --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ --screen-jpeg-quality 40 \
 	--appium-port ${PORT} --stf-appium-port ${STF_APPIUM_PORT} --public-node-ip ${STF_HOST_PROVIDER_PUBLIC} \

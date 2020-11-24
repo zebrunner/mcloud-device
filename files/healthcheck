@@ -29,13 +29,6 @@ if [[ ! $? -eq 0 ]]; then
   state=1
 fi
 
-
-#APPIUM_STATUS=$(ps -ef | grep -v "grep" | grep "automation-name" | grep -c "appium")
-#if [ ! "$APPIUM_STATUS" -eq "1" ]; then
-#  echo "appium provider is dead. reastarting container..."
-#  exit 1
-#fi
-
 if [[ $state -eq 1 ]]; then
   bash -c 'kill -s 15 -1 && (sleep 10; kill -s 9 -1)'
 fi

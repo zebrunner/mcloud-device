@@ -115,6 +115,9 @@ RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
 
 USER root
 
+RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y nodejs \
+    && node --version
 
 CMD bash /opt/start_all.sh
 
