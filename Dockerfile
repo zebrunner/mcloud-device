@@ -1,16 +1,14 @@
 FROM ubuntu:16.04
 
-ENV ANDROID_HOME /opt/android-sdk-linux
-ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools:$PATH
 ENV PORT 4723
-ENV HUB_PORT 4444
+ENV SELENIUM_HUB_HOST selenium-hub
+ENV SELENIUM_HUB_PORT 4444
 ENV DEVICEUDID qwert
 ENV DEVICENAME qwert
 ENV ADB_PORT 5037
 ENV MIN_PORT 7400
 ENV MAX_PORT 7410
 ENV PROXY_PORT 9000
-ENV HEARTBEAT_INTERVAL 60
 ENV APPIUM_LOG_LEVEL debug
 ENV APPIUM_RELAXED_SECURITY --relaxed-security
 
@@ -21,14 +19,11 @@ ENV PATH /app/bin:$PATH
 # Work in app dir by default.
 WORKDIR /app
 
-# Export default app port, not enough for all processes but it should do for now.
-#EXPOSE 3000
-############################################
-#RUN mkdir -p /opt/stf
-
 COPY files/configgen.sh /opt/configgen.sh
 COPY files/adbkey.pub /root/.android/adbkey.pub
 COPY files/adbkey /root/.android/adbkey
+
+COPY files/healthcheck /usr/local/bin/
 
 # Copy recursively files content including app source.
 COPY files /opt/
@@ -64,17 +59,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     telnet \
     net-tools \
     nano \
+    android-tools-adb \
 
 # Install 8.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get -qqy install nodejs \
-
-## Install nodejs
-#    && cd /tmp \
-#    && wget --progress=dot:mega \
-#      https://nodejs.org/dist/v8.11.2/node-v8.11.2-linux-x64.tar.xz \
-#    && tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local \
-#    && rm node-v*.tar.xz  \
 
 # Install STF dependencies
     && su stf-build -s /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
@@ -128,3 +117,5 @@ USER root
 
 
 CMD bash /opt/start_all.sh
+
+HEALTHCHECK CMD ["healthcheck"]
