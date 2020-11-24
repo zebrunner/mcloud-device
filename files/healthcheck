@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Android device container is considered healthy if adb, stf provider/cli and appium up&running
+
+#init to valid state
+state=0
+
+ADB_STATUS=$(adb devices | grep -c ${DEVICEUDID})
+if [ ! "$ADB_STATUS" -eq "1" ]; then
+    echo "adb server is dead. restarting container..."
+    state=1
+fi
+
+STFDEVICE_STATUS=$(ps -ef | grep -v "grep" | grep -c "cli device")
+if [ ! "$STFDEVICE_STATUS" -eq "1" ]; then
+  echo "stf device is dead. reastarting container..."
+  state=1
+fi
+
+STFPROVIDER_STATUS=$(ps -ef | grep -v "grep" | grep -c "stf provider")
+if [ ! "$STFPROVIDER_STATUS" -eq "1" ]; then
+  echo "stf provider is dead. reastarting container..."
+  state=1
+fi
+
+curl --silent http://localhost:$PORT/wd/hub/status | grep "\"status\":0"
+if [[ ! $? -eq 0 ]]; then
+  echo "appium provider is dead. reastarting container..."
+  state=1
+fi
+
+
+#APPIUM_STATUS=$(ps -ef | grep -v "grep" | grep "automation-name" | grep -c "appium")
+#if [ ! "$APPIUM_STATUS" -eq "1" ]; then
+#  echo "appium provider is dead. reastarting container..."
+#  exit 1
+#fi
+
+if [[ $state -eq 1 ]]; then
+  bash -c 'kill -s 15 -1 && (sleep 10; kill -s 9 -1)'
+fi
+
+exit $state
