@@ -1,5 +1,8 @@
 FROM ubuntu:16.04
 
+ENV ANDROID_HOME /opt/android-sdk-linux
+ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
+
 ENV PORT 4723
 ENV SELENIUM_HUB_HOST selenium-hub
 ENV SELENIUM_HUB_PORT 4444
@@ -59,7 +62,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     telnet \
     net-tools \
     nano \
-    android-tools-adb \
 
 # Install 8.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
