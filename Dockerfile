@@ -43,10 +43,12 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
       --create-home \
       --shell /usr/sbin/nologin \
+      --uid 1000 \
       stf && \
     dpkg --add-architecture i386 && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && apt-get install -y \
+    openjdk-8-jdk \
     curl \
     gettext-base \
     lib32ncurses5 \
@@ -63,11 +65,19 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     net-tools \
     nano \
 
-# Install 8.x node and npm (6.x)
+# Install 8.x and 10.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get -qqy install nodejs \
+    && curl -sL https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y nodejs
+
+#===============
+# Set JAVA_HOME
+#===============
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/jre"
 
 # Install STF dependencies
+RUN npm link --force node@8 \
     && su stf-build -s /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
     && apt-get -qqy update \
     && apt-get -qqy install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
@@ -103,23 +113,22 @@ RUN set -x && \
     tar xzf stf-*.tgz --strip-components 1 -C /app && \
     bower cache clean && \
     npm prune --production && \
-    mv node_modules /app && \
+    mv node_modules/* /app/node_modules/ && \
 #    npm cache clean && \
-    rm -rf /var/lib/apt/lists/* ~/.node-gyp /tmp/* /var/tmp/* && \
+    rm -rf /var/lib/apt/lists/* ~/.node-gyp && \
     cd /app
 
 # Install websockify
 RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
     cd /opt/websockify && make
 
+# Unable to use stf user as device can not be detected by adb!
 ## Switch to the app user.
-##USER stf
+#USER stf
 
 USER root
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y nodejs \
-    && node --version
+RUN rm -rf /tmp/* /var/tmp/*
 
 CMD bash /opt/start_all.sh
 
