@@ -5,20 +5,22 @@
 # generate json file
 /opt/configgen.sh > /opt/nodeconfig.json
 
+APPIUM_HOME=/opt/mcloud/appium/node_modules/appium
+
 WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900"
 SOCKET_PROTOCOL=ws
 WEB_PROTOCOL=http
 
 # uninstall appium specific
 echo "uninstalling io.appium.* apps..."
-adb uninstall io.appium.uiautomator2.server.test > /dev/null & 2>&1
-adb uninstall io.appium.uiautomator2.server > /dev/null & 2>&1
-adb uninstall io.appium.settings > /dev/null & 2>&1
-adb uninstall io.appium.unlock > /dev/null & 2>&1
+adb uninstall io.appium.uiautomator2.server.test
+adb uninstall io.appium.uiautomator2.server
+adb uninstall io.appium.settings
+adb uninstall io.appium.unlock
 echo "io.appium.* apps uninstalled."
 
-# provide execute permissions to chromedrivers on startup
-chmod -R a+x /opt/mcloud/appium/node_modules/appium-chromedriver/chromedriver/linux
+## provide execute permissions to chromedrivers on startup
+#chmod -R a+x $APPIUM_HOME/node_modules/appium-chromedriver/chromedriver/linux
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_HOST_PROVIDER_PUBLIC}" ]; then
@@ -44,7 +46,7 @@ ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
 ${WEBSOCKIFY_CMD} &
 npm link --force node@10
 node --version
-node /opt/mcloud/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
+node ${APPIUM_HOME} -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
            --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
 sleep 5
 npm link --force node@8

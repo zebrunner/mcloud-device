@@ -43,7 +43,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
       --create-home \
       --shell /usr/sbin/nologin \
-      --uid 1000 \
       stf && \
     dpkg --add-architecture i386 && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
