@@ -18,7 +18,7 @@ adb uninstall io.appium.unlock > /dev/null & 2>&1
 echo "io.appium.* apps uninstalled."
 
 # provide execute permissions to chromedrivers on startup
-chmod -R a+x /opt/appium/node_modules/appium-chromedriver/chromedriver/linux
+chmod -R a+x /opt/mcloud/appium/node_modules/appium-chromedriver/chromedriver/linux
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_HOST_PROVIDER_PUBLIC}" ]; then
@@ -31,8 +31,8 @@ if [ -z "${STF_HOST_PROVIDER_PRIVATE}" ]; then
 fi
 
 
-if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
-    WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
+if [ -f /opt/mcloud/nginx/ssl/ssl.crt ] && [ /opt/mcloud/nginx/ssl/ssl.key ]; then
+    WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/mcloud/nginx/ssl/ssl.crt --key /opt/mcloud/nginx/ssl/ssl.key"
     SOCKET_PROTOCOL=wss
     WEB_PROTOCOL=https
 fi
@@ -44,7 +44,7 @@ ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
 ${WEBSOCKIFY_CMD} &
 npm link --force node@10
 node --version
-node /opt/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
+node /opt/mcloud/appium/ -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
            --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
 sleep 5
 npm link --force node@8
