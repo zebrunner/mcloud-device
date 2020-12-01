@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-ENV ANDROID_HOME /opt/android-sdk-linux
+ENV ANDROID_HOME /opt/mcloud/android-sdk-linux
 ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
 
 ENV PORT 4723
