@@ -28,8 +28,8 @@ COPY files/adbkey /root/.android/adbkey
 
 COPY files/healthcheck /usr/local/bin/
 
-# Copy recursively files content including app source.
-COPY files /opt/
+COPY files/configgen.sh /opt/
+COPY files/start_all.sh /opt/
 
 RUN mkdir -p /opt/apk
 RUN mkdir -p /var/lib/jenkins/workspace
@@ -127,7 +127,6 @@ RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
 #USER stf
 
 USER root
-
 RUN rm -rf /tmp/* /var/tmp/*
 
 CMD bash /opt/start_all.sh
