@@ -1,5 +1,21 @@
 #!/bin/bash
 
+
+# wait until device is connected and authorized
+unauthorized=0
+available=0
+
+#TODO: for unauthorized device wait 60 sec and exit
+while [[ "$unauthorized" -eq 0 && "$available" -eq 0 ]]
+do
+    sleep 3
+    unauthorized=`adb devices | grep -c unauthorized`
+    echo "unauthorized: $unauthorized"
+    available=`adb devices | grep -c -w device`
+    echo "available: $available"
+done
+
+
 #execute to print info in stdout
 . /opt/configgen.sh
 # generate json file

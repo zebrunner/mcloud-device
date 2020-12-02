@@ -1,15 +1,5 @@
 #!/bin/bash
 
-unauthorized=0
-available=0
-
-while [[ "$unauthorized" -eq 0 && "$available" -eq 0 ]]
-do
-    sleep 1
-    unauthorized=`adb devices | grep -c unauthorized`
-    available=`adb devices | grep -c -w device`
-done
-
 # device type
 isTablet=`adb shell getprop ro.build.characteristics | grep tablet`
 isTv=`adb shell getprop ro.build.characteristics | grep tv`

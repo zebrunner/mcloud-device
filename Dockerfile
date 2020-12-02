@@ -23,17 +23,12 @@ ENV PATH /app/bin:$PATH
 WORKDIR /app
 
 COPY files/configgen.sh /opt/configgen.sh
-COPY files/adbkey.pub /root/.android/adbkey.pub
-COPY files/adbkey /root/.android/adbkey
-
 COPY files/healthcheck /usr/local/bin/
 
 COPY files/configgen.sh /opt/
 COPY files/start_all.sh /opt/
 
-RUN mkdir -p /opt/apk
-RUN mkdir -p /var/lib/jenkins/workspace
-RUN mkdir -p /app
+RUN mkdir -p /opt/apk /var/lib/jenkins/workspace /app
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
