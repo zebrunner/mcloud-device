@@ -57,8 +57,8 @@ if [ -z "${STF_HOST_PROVIDER_PRIVATE}" ]; then
 fi
 
 
-if [ -f /opt/mcloud/nginx/ssl/ssl.crt ] && [ /opt/mcloud/nginx/ssl/ssl.key ]; then
-    WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/mcloud/nginx/ssl/ssl.crt --key /opt/mcloud/nginx/ssl/ssl.key"
+if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
+    WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
     SOCKET_PROTOCOL=wss
     WEB_PROTOCOL=https
 fi
