@@ -1,16 +1,17 @@
 FROM ubuntu:16.04
 
-ENV ANDROID_HOME /opt/android-sdk-linux
-ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools:$PATH
+ENV ANDROID_HOME /opt/mcloud/android-sdk-linux
+ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
+
 ENV PORT 4723
-ENV HUB_PORT 4444
+ENV SELENIUM_HUB_HOST selenium-hub
+ENV SELENIUM_HUB_PORT 4444
 ENV DEVICEUDID qwert
 ENV DEVICENAME qwert
 ENV ADB_PORT 5037
 ENV MIN_PORT 7400
 ENV MAX_PORT 7410
 ENV PROXY_PORT 9000
-ENV HEARTBEAT_INTERVAL 60
 ENV APPIUM_LOG_LEVEL debug
 ENV APPIUM_RELAXED_SECURITY --relaxed-security
 
@@ -21,21 +22,13 @@ ENV PATH /app/bin:$PATH
 # Work in app dir by default.
 WORKDIR /app
 
-# Export default app port, not enough for all processes but it should do for now.
-#EXPOSE 3000
-############################################
-#RUN mkdir -p /opt/stf
-
 COPY files/configgen.sh /opt/configgen.sh
-COPY files/adbkey.pub /root/.android/adbkey.pub
-COPY files/adbkey /root/.android/adbkey
+COPY files/healthcheck /usr/local/bin/
 
-# Copy recursively files content including app source.
-COPY files /opt/
+COPY files/configgen.sh /opt/
+COPY files/start_all.sh /opt/
 
-RUN mkdir -p /opt/apk
-RUN mkdir -p /var/lib/jenkins/workspace
-RUN mkdir -p /app
+RUN mkdir -p /opt/apk /var/lib/jenkins/workspace /app
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
@@ -49,6 +42,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     dpkg --add-architecture i386 && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && apt-get install -y \
+    openjdk-8-jdk \
     curl \
     gettext-base \
     lib32ncurses5 \
@@ -65,18 +59,19 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     net-tools \
     nano \
 
-# Install 8.x node and npm (6.x)
+# Install 8.x and 10.x node and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get -qqy install nodejs \
+    && curl -sL https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y nodejs
 
-## Install nodejs
-#    && cd /tmp \
-#    && wget --progress=dot:mega \
-#      https://nodejs.org/dist/v8.11.2/node-v8.11.2-linux-x64.tar.xz \
-#    && tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local \
-#    && rm node-v*.tar.xz  \
+#===============
+# Set JAVA_HOME
+#===============
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/jre"
 
 # Install STF dependencies
+RUN npm link --force node@8 \
     && su stf-build -s /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
     && apt-get -qqy update \
     && apt-get -qqy install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
@@ -112,19 +107,22 @@ RUN set -x && \
     tar xzf stf-*.tgz --strip-components 1 -C /app && \
     bower cache clean && \
     npm prune --production && \
-    mv node_modules /app && \
+    mv node_modules/* /app/node_modules/ && \
 #    npm cache clean && \
-    rm -rf /var/lib/apt/lists/* ~/.node-gyp /tmp/* /var/tmp/* && \
+    rm -rf /var/lib/apt/lists/* ~/.node-gyp && \
     cd /app
 
 # Install websockify
 RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
     cd /opt/websockify && make
 
+# Unable to use stf user as device can not be detected by adb!
 ## Switch to the app user.
-##USER stf
+#USER stf
 
 USER root
-
+RUN rm -rf /tmp/* /var/tmp/*
 
 CMD bash /opt/start_all.sh
+
+HEALTHCHECK CMD ["healthcheck"]
