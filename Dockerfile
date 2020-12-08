@@ -90,7 +90,7 @@ RUN apt-get -qqy update \
     && apt-get -qqy install ffmpeg
 
 # Clone STF
-RUN git clone --single-branch --branch master https://github.com/qaprosoft/stf.git /opt/stf
+RUN git clone --single-branch --branch master https://github.com/zebrunner/stf.git /opt/stf
 
 # Give permissions to our build user.
 RUN chown -R stf-build:stf-build /opt /app /usr/lib/node_modules/npm /var/lib/apt
