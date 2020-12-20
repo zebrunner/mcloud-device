@@ -79,6 +79,7 @@ cat << EndOfMessage
 	  "adb_port": ${ADB_PORT},
 	  "proxy_port": ${PROXY_PORT},
 	  "vnc": "${STF_PUBLIC_HOST}:${MAX_PORT}",
+          "vncLink": "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/mcloud/vnc/${STF_HOST_PROVIDER}/${MAX_PORT}",
           "automationName": "${AUTOMATION_NAME}"
         }
       ],

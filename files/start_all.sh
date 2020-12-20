@@ -23,6 +23,15 @@ do
     sleep 3
 done
 
+export WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900"
+export SOCKET_PROTOCOL=ws
+export WEB_PROTOCOL=http
+
+if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
+    export WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
+    export SOCKET_PROTOCOL=wss
+    export WEB_PROTOCOL=https
+fi
 
 #execute to print info in stdout
 . /opt/configgen.sh
@@ -30,10 +39,6 @@ done
 /opt/configgen.sh > /opt/nodeconfig.json
 
 APPIUM_HOME=/opt/mcloud/appium/node_modules/appium
-
-WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900"
-SOCKET_PROTOCOL=ws
-WEB_PROTOCOL=http
 
 # uninstall appium specific
 echo "uninstalling io.appium.* apps..."
@@ -50,12 +55,6 @@ echo "io.appium.* apps uninstalled."
 if [ -z "${STF_HOST_PROVIDER}" ]; then
       #STF_HOST_PROVIDER is empty
       STF_HOST_PROVIDER=${STF_PUBLIC_HOST}
-fi
-
-if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
-    WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
-    SOCKET_PROTOCOL=wss
-    WEB_PROTOCOL=https
 fi
 
 ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
