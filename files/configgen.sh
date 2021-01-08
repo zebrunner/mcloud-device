@@ -8,7 +8,7 @@ isTv=`adb shell getprop ro.build.characteristics | grep tv`
 arm=`adb shell getprop ro.product.cpu.abi | grep arm`
 
 # version
-ANDROID_VERSION=`adb shell getprop | grep ro.build.version.release |  sed 's/^.*:.*\[\(.*\)\].*$/\1/g'`
+ANDROID_VERSION=`adb shell getprop | grep -m 1 ro.build.version.release |  sed 's/^.*:.*\[\(.*\)\].*$/\1/g'`
 
 # display size
 info=`adb shell dumpsys display | grep -A 20 DisplayDeviceInfo`
@@ -52,7 +52,7 @@ else
     DISPLAYSIZE=7
 fi
 
-if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8*  ]] || [[ ${ANDROID_VERSION} == 9*  ]] || [[ ${ANDROID_VERSION} == 10*  ]]
+if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8* ]] || [[ ${ANDROID_VERSION} == 9* ]] || [[ ${ANDROID_VERSION} == 10* ]] || [[ ${ANDROID_VERSION} == 11* ]]
 then
     export AUTOMATION_NAME='uiautomator2'
 else
