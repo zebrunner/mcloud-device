@@ -57,18 +57,25 @@ if [ -z "${STF_HOST_PROVIDER}" ]; then
       STF_HOST_PROVIDER=${STF_PUBLIC_HOST}
 fi
 
-ln -s -f /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
+if [ ! -f /usr/bin/java ]; then
+  ln -s /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
+fi
+
 ${WEBSOCKIFY_CMD} &
 
+which node
+
 npm link --force node@10
-#node --version
+sleep 3
+node --version
 node ${APPIUM_HOME} -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
            --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
 
 sleep 5
 
 npm link --force node@8
-#node --version
+sleep 3
+node --version
 stf provider --name "${DEVICEUDID}" --device-name "${DEVICENAME}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
         --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
         --group-timeout 3600 --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ --screen-jpeg-quality 40 \
