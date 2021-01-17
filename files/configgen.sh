@@ -8,7 +8,7 @@ isTv=`adb shell getprop ro.build.characteristics | grep tv`
 arm=`adb shell getprop ro.product.cpu.abi | grep arm`
 
 # version
-ANDROID_VERSION=`adb shell getprop | grep ro.build.version.release |  sed 's/^.*:.*\[\(.*\)\].*$/\1/g'`
+ANDROID_VERSION=`adb shell getprop | grep -m 1 ro.build.version.release |  sed 's/^.*:.*\[\(.*\)\].*$/\1/g'`
 
 # display size
 info=`adb shell dumpsys display | grep -A 20 DisplayDeviceInfo`
@@ -52,13 +52,12 @@ else
     DISPLAYSIZE=7
 fi
 
-if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8*  ]] || [[ ${ANDROID_VERSION} == 9*  ]] || [[ ${ANDROID_VERSION} == 10*  ]]
+if [[ ${ANDROID_VERSION} == 4* ]] || [[ ${ANDROID_VERSION} == 5* ]] || [[ ${ANDROID_VERSION} == 6* ]]
 then
-    export AUTOMATION_NAME='uiautomator2'
-else
     export AUTOMATION_NAME='Appium'
+else
+    export AUTOMATION_NAME='uiautomator2'
 fi
-#export AUTOMATION_NAME='uiautomator2'
 
 # current host
 HOST=`awk 'END{print $1}' /etc/hosts`
@@ -79,12 +78,13 @@ cat << EndOfMessage
 	  "adb_port": ${ADB_PORT},
 	  "proxy_port": ${PROXY_PORT},
 	  "vnc": "${STF_PUBLIC_HOST}:${MAX_PORT}",
+          "vncLink": "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/mcloud/vnc/${STF_HOST_PROVIDER}/${MAX_PORT}",
           "automationName": "${AUTOMATION_NAME}"
         }
       ],
   "configuration":
   {
-    "proxy": "com.qaprosoft.carina.grid.MobileRemoteProxy",
+    "proxy": "com.zebrunner.mcloud.grid.MobileRemoteProxy",
     "url":"http://${HOST}:${PORT}/wd/hub",
     "port": ${PORT},
     "host": "${HOST}",
