@@ -85,7 +85,7 @@ cat << EndOfMessage
       ],
   "configuration":
   {
-    "proxy": "com.qaprosoft.carina.grid.MobileRemoteProxy",
+    "proxy": "com.zebrunner.mcloud.grid.MobileRemoteProxy",
     "url":"http://${HOST}:${PORT}/wd/hub",
     "port": ${PORT},
     "host": "${HOST}",
