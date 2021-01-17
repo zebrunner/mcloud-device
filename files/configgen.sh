@@ -52,13 +52,12 @@ else
     DISPLAYSIZE=7
 fi
 
-if [[ ${ANDROID_VERSION} == 7* ]] || [[ ${ANDROID_VERSION} == 8* ]] || [[ ${ANDROID_VERSION} == 9* ]] || [[ ${ANDROID_VERSION} == 10* ]] || [[ ${ANDROID_VERSION} == 11* ]]
+if [[ ${ANDROID_VERSION} == 4* ]] || [[ ${ANDROID_VERSION} == 5* ]] || [[ ${ANDROID_VERSION} == 6* ]]
 then
-    export AUTOMATION_NAME='uiautomator2'
-else
     export AUTOMATION_NAME='Appium'
+else
+    export AUTOMATION_NAME='uiautomator2'
 fi
-#export AUTOMATION_NAME='uiautomator2'
 
 # current host
 HOST=`awk 'END{print $1}' /etc/hosts`
