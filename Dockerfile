@@ -114,7 +114,7 @@ RUN set -x && \
 
 # Install websockify
 RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
-    cd /opt/websockify && make
+    cd /opt/websockify && git checkout tags/v0.9.0 -b v0.9.0 && make
 
 # Unable to use stf user as device can not be detected by adb!
 ## Switch to the app user.
