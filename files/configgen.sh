@@ -59,8 +59,10 @@ else
     export AUTOMATION_NAME='uiautomator2'
 fi
 
-# current host
-HOST=`awk 'END{print $1}' /etc/hosts`
+if [[ -z $HOST ]]; then
+    # calculate current HOST name only if HOST is missed
+    HOST=`awk 'END{print $1}' /etc/hosts`
+fi
 
 cat << EndOfMessage
 {
