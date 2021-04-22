@@ -59,8 +59,10 @@ else
     export AUTOMATION_NAME='uiautomator2'
 fi
 
-# current host
-HOST=`awk 'END{print $1}' /etc/hosts`
+if [[ -z $HOST ]]; then
+    # calculate current HOST name only if HOST is missed
+    HOST=`awk 'END{print $1}' /etc/hosts`
+fi
 
 cat << EndOfMessage
 {
@@ -78,7 +80,7 @@ cat << EndOfMessage
 	  "adb_port": ${ADB_PORT},
 	  "proxy_port": ${PROXY_PORT},
 	  "vnc": "${STF_PUBLIC_HOST}:${MAX_PORT}",
-          "vncLink": "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/mcloud/vnc/${STF_HOST_PROVIDER}/${MAX_PORT}",
+          "vncLink": "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}:${MAX_PORT}",
           "automationName": "${AUTOMATION_NAME}"
         }
       ],
