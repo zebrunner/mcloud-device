@@ -73,7 +73,7 @@ sleep 5
 npm link --force node@8
 sleep 3
 node --version
-stf provider --name "${DEVICEUDID}" --device-name "${DEVICENAME}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
+stf provider --name "${DEVICEUDID}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
         --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
         --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ \
 	--appium-host ${STF_PRIVATE_HOST} --appium-port ${PORT} \

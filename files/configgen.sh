@@ -72,7 +72,7 @@ cat << EndOfMessage
           "version":"${ANDROID_VERSION}",
           "maxInstances": 1,
           "platform":"ANDROID",
-          "deviceName": "${DEVICENAME}",
+          "deviceName": "${STF_PROVIDER_DEVICE_NAME}",
           "deviceType": "${DEVICETYPE}",
           "platformName":"ANDROID",
           "platformVersion":"${ANDROID_VERSION}",
