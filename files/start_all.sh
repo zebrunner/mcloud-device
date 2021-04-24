@@ -77,8 +77,9 @@ stf provider --name "${DEVICEUDID}" --device-name "${DEVICENAME}" --min-port=${M
         --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
         --group-timeout 3600 --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ --screen-jpeg-quality 30 --screen-reset false \
 	--appium-host ${STF_PRIVATE_HOST} --appium-port ${PORT} \
-	--connect-url-pattern ${STF_HOST_PROVIDER} \
-        --heartbeat-interval 10000 --vnc-initial-size 600x800 --vnc-port 5900 --no-cleanup --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" & >&1 & 2>&1
+	--connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
+        --heartbeat-interval 10000 --vnc-initial-size 600x800 --vnc-port 5900 --no-cleanup \
+	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" & >&1 & 2>&1
 
 echo y > $HOME/.healthy
 # healthcheck script could remove this file in case of the failure
