@@ -59,11 +59,6 @@ else
     export AUTOMATION_NAME='uiautomator2'
 fi
 
-if [[ -z $HOST ]]; then
-    # calculate current HOST name only if HOST is missed
-    HOST=`awk 'END{print $1}' /etc/hosts`
-fi
-
 cat << EndOfMessage
 {
   "capabilities":
@@ -72,24 +67,24 @@ cat << EndOfMessage
           "version":"${ANDROID_VERSION}",
           "maxInstances": 1,
           "platform":"ANDROID",
-          "deviceName": "${DEVICENAME}",
+          "deviceName": "${STF_PROVIDER_DEVICE_NAME}",
           "deviceType": "${DEVICETYPE}",
           "platformName":"ANDROID",
           "platformVersion":"${ANDROID_VERSION}",
-	  "udid": "${DEVICEUDID}",
+	  "udid": "${DEVICE_UDID}",
 	  "adb_port": ${ADB_PORT},
 	  "proxy_port": ${PROXY_PORT},
-	  "vnc": "${STF_PUBLIC_HOST}:${MAX_PORT}",
-          "vncLink": "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}:${MAX_PORT}",
+	  "vnc": "${STF_PROVIDER_PUBLIC_IP}:${STF_PROVIDER_MAX_PORT}",
+          "vncLink": "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${STF_PROVIDER_MAX_PORT}",
           "automationName": "${AUTOMATION_NAME}"
         }
       ],
   "configuration":
   {
     "proxy": "com.zebrunner.mcloud.grid.MobileRemoteProxy",
-    "url":"http://${HOST}:${PORT}/wd/hub",
-    "port": ${PORT},
-    "host": "${HOST}",
+    "url":"http://${STF_PROVIDER_APPIUM_HOST}:${STF_PROVIDER_APPIUM_PORT}/wd/hub",
+    "host": "${STF_PROVIDER_APPIUM_HOST}",
+    "port": ${STF_PROVIDER_APPIUM_PORT},
     "hubHost": "${SELENIUM_HUB_HOST}",
     "hubPort": ${SELENIUM_HUB_PORT},
     "maxSession": 1,

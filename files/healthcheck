@@ -10,7 +10,7 @@ kill_container() {
   rm -f $HOME/.healthy
 }
 
-ADB_STATUS=$(adb devices | grep -c ${DEVICEUDID})
+ADB_STATUS=$(adb devices | grep -c ${DEVICE_UDID})
 if [ ! "$ADB_STATUS" -eq "1" ]; then
   kill_container "adb server is dead. restarting container..."
   exit 0
@@ -28,7 +28,7 @@ if [ ! "$STFPROVIDER_STATUS" -eq "1" ]; then
   exit 0
 fi
 
-curl --silent http://localhost:$PORT/wd/hub/status | grep "\"status\":0"
+curl --silent http://localhost:${STF_PROVIDER_APPIUM_PORT}/wd/hub/status | grep "\"status\":0"
 if [[ ! $? -eq 0 ]]; then
   kill_container "appium provider is dead. reastarting container..."
   exit 0
