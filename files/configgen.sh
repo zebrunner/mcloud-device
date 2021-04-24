@@ -59,11 +59,6 @@ else
     export AUTOMATION_NAME='uiautomator2'
 fi
 
-if [[ -z $HOST ]]; then
-    # calculate current HOST name only if HOST is missed
-    HOST=`awk 'END{print $1}' /etc/hosts`
-fi
-
 cat << EndOfMessage
 {
   "capabilities":
@@ -87,9 +82,9 @@ cat << EndOfMessage
   "configuration":
   {
     "proxy": "com.zebrunner.mcloud.grid.MobileRemoteProxy",
-    "url":"http://${HOST}:${STF_PROVIDER_APPIUM_PORT}/wd/hub",
+    "url":"http://${STF_PROVIDER_APPIUM_HOST}:${STF_PROVIDER_APPIUM_PORT}/wd/hub",
+    "host": "${STF_PROVIDER_APPIUM_HOST}",
     "port": ${STF_PROVIDER_APPIUM_PORT},
-    "host": "${HOST}",
     "hubHost": "${SELENIUM_HUB_HOST}",
     "hubPort": ${SELENIUM_HUB_PORT},
     "maxSession": 1,
