@@ -23,12 +23,12 @@ do
     sleep 3
 done
 
-export WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900"
+export WEBSOCKIFY_CMD="/opt/websockify/run ${STF_PROVIDER_MAX_PORT} :5900"
 export SOCKET_PROTOCOL=ws
 export WEB_PROTOCOL=http
 
 if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
-    export WEBSOCKIFY_CMD="/opt/websockify/run ${MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
+    export WEBSOCKIFY_CMD="/opt/websockify/run ${STF_PROVIDER_MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
     export SOCKET_PROTOCOL=wss
     export WEB_PROTOCOL=https
 fi
@@ -51,7 +51,7 @@ echo "io.appium.* apps uninstalled."
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_HOST_PROVIDER}" ]; then
       #STF_HOST_PROVIDER is empty
-      STF_HOST_PROVIDER=${STF_PUBLIC_HOST}
+      STF_HOST_PROVIDER=${STF_PROVIDER_PUBLIC_IP}
 fi
 
 if [ ! -f /usr/bin/java ]; then
@@ -65,7 +65,7 @@ which node
 npm link --force node@10
 sleep 3
 node --version
-node ${APPIUM_HOME} -p ${PORT} --log-timestamp --session-override --udid ${DEVICEUDID} ${APPIUM_RELAXED_SECURITY} \
+node ${APPIUM_HOME} -p ${STF_PROVIDER_APPIUM_PORT} --log-timestamp --session-override --udid ${DEVICE_UDID} ${APPIUM_RELAXED_SECURITY} \
            --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
 
 sleep 5
@@ -73,12 +73,12 @@ sleep 5
 npm link --force node@8
 sleep 3
 node --version
-stf provider --name "${DEVICEUDID}" --min-port=${MIN_PORT} --max-port=${MAX_PORT} \
+
+stf provider --name "${DEVICE_UDID}" \
         --connect-sub tcp://${STF_PRIVATE_HOST}:${STF_TCP_SUB_PORT} --connect-push tcp://${STF_PRIVATE_HOST}:${STF_TCP_PUB_PORT} \
-        --public-ip ${STF_PUBLIC_HOST} --storage-url ${WEB_PROTOCOL}://${STF_PUBLIC_HOST}/ \
-	--appium-host ${STF_PRIVATE_HOST} --appium-port ${PORT} \
-	--connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
-	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PUBLIC_HOST}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" & >&1 & 2>&1
+        --connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
+        --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
+	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" & >&1 & 2>&1
 
 echo y > $HOME/.healthy
 # healthcheck script could remove this file in case of the failure
