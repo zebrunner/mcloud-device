@@ -4,32 +4,25 @@
 # 0 - healthy
 # 1 - unhealthy
 
-kill_container() {
-  echo $1
-  # while $HOME/.healthy exists container is good.
-  rm -f $HOME/.healthy
-}
+#ADB_STATUS=$(adb devices | grep -c ${DEVICE_UDID})
+#if [ ! "$ADB_STATUS" -eq "1" ]; then
+#  echo "ADB service is not detected!"
+#  pkill adb
+#  exit 1
+#fi
 
-ADB_STATUS=$(adb devices | grep -c ${DEVICE_UDID})
-if [ ! "$ADB_STATUS" -eq "1" ]; then
-  kill_container "adb server is dead. restarting container..."
-  exit 0
-fi
-
-STFDEVICE_STATUS=$(ps -ef | grep -v "grep" | grep -c "cli device")
-if [ ! "$STFDEVICE_STATUS" -eq "1" ]; then
-  kill_container "stf device is dead. reastarting container..."
-  exit 0
-fi
-
-STFPROVIDER_STATUS=$(ps -ef | grep -v "grep" | grep -c "stf provider")
-if [ ! "$STFPROVIDER_STATUS" -eq "1" ]; then
-  kill_container "stf provider is dead. reastarting container..."
-  exit 0
+stf_device_pid=`pgrep -f "cli device"`
+if [[ -z $stf_device_pid ]]; then
+  echo "STF device cli is not detected!"
+  pkill node
+  exit 1
 fi
 
 curl --silent http://localhost:${STF_PROVIDER_APPIUM_PORT}/wd/hub/status | grep "\"status\":0"
 if [[ ! $? -eq 0 ]]; then
-  kill_container "appium provider is dead. reastarting container..."
-  exit 0
+  echo "Appium service is not detected!"
+  pkill node
+  exit 1
 fi
+
+exit 0

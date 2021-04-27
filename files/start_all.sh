@@ -42,10 +42,10 @@ APPIUM_HOME=/opt/mcloud/appium/node_modules/appium
 
 # uninstall appium specific
 echo "uninstalling io.appium.* apps..."
-adb uninstall io.appium.uiautomator2.server.test
-adb uninstall io.appium.uiautomator2.server
-adb uninstall io.appium.settings
-adb uninstall io.appium.unlock
+adb uninstall io.appium.uiautomator2.server.test > /dev/null 2>&1
+adb uninstall io.appium.uiautomator2.server > /dev/null 2>&1
+adb uninstall io.appium.settings > /dev/null 2>&1
+adb uninstall io.appium.unlock > /dev/null 2>&1
 echo "io.appium.* apps uninstalled."
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
@@ -66,7 +66,7 @@ npm link --force node@10
 sleep 3
 node --version
 node ${APPIUM_HOME} -p ${STF_PROVIDER_APPIUM_PORT} --log-timestamp --session-override --udid ${DEVICE_UDID} ${APPIUM_RELAXED_SECURITY} \
-           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} & >&1 & 2>&1
+           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} &
 
 sleep 5
 
@@ -77,14 +77,24 @@ node --version
 stf provider --name "${DEVICE_UDID}" \
         --connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
         --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
-	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" & >&1 & 2>&1
+	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" &
 
-echo y > $HOME/.healthy
-# healthcheck script could remove this file in case of the failure
-while [[ -f $HOME/.healthy ]]
-do
-  sleep 5
-done
+echo "---------------------------------------------------------"
+#show existing processes
+ps -ef
+echo "---------------------------------------------------------"
 
-echo returing non zero exit code...
-exit 1
+# wait until backgroud processes exists for adb, websockify (python) and node (appium, stf)
+node_pids=`pidof node`
+python_pids=`pidof python`
+adb_pids=`pidof adb`
+
+echo wait -n $node_pids $python_pids $adb_pids
+wait -n $node_pids $python_pids $adb_pids
+
+
+echo "Exit status: $?"
+echo "---------------------------------------------------------"
+ps -ef
+echo "---------------------------------------------------------"
+
