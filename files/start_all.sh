@@ -74,13 +74,13 @@ npm link --force node@8
 sleep 3
 node --version
 
-stf provider --name "${DEVICE_UDID}" \
+stf provider \
         --connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
         --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
 	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" &
 
 echo "---------------------------------------------------------"
-#show existing processes
+echo "processes after start:"
 ps -ef
 echo "---------------------------------------------------------"
 
@@ -92,9 +92,8 @@ adb_pids=`pidof adb`
 echo wait -n $node_pids $python_pids $adb_pids
 wait -n $node_pids $python_pids $adb_pids
 
-
 echo "Exit status: $?"
 echo "---------------------------------------------------------"
+echo "processes before exit:"
 ps -ef
 echo "---------------------------------------------------------"
-
