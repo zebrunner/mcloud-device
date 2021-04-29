@@ -49,9 +49,9 @@ adb uninstall io.appium.unlock > /dev/null 2>&1
 echo "io.appium.* apps uninstalled."
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
-if [ -z "${STF_HOST_PROVIDER}" ]; then
-      #STF_HOST_PROVIDER is empty
-      STF_HOST_PROVIDER=${STF_PROVIDER_PUBLIC_IP}
+if [ -z "${STF_PROVIDER_HOST}" ]; then
+      #STF_PROVIDER_HOST is empty
+      STF_PROVIDER_HOST=${STF_PROVIDER_PUBLIC_IP}
 fi
 
 if [ ! -f /usr/bin/java ]; then
@@ -75,9 +75,9 @@ sleep 3
 node --version
 
 stf provider \
-        --connect-url-pattern "${STF_HOST_PROVIDER}:<%= publicPort %>" \
+        --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
         --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
-	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_HOST_PROVIDER}/<%= serial %>/<%= publicPort %>/" &
+	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
 
 echo "---------------------------------------------------------"
 echo "processes after start:"
