@@ -74,8 +74,8 @@ cat << EndOfMessage
 	  "udid": "${DEVICE_UDID}",
 	  "adb_port": ${ADB_PORT},
 	  "proxy_port": ${PROXY_PORT},
-	  "vnc": "${STF_PROVIDER_PUBLIC_IP}:${STF_PROVIDER_MAX_PORT}",
-          "vncLink": "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${STF_PROVIDER_MAX_PORT}",
+	  "vnc": "${STF_PROVIDER_HOST}:${STF_PROVIDER_MAX_PORT}",
+          "vncLink": "${SOCKET_PROTOCOL}://${STF_PROVIDER_HOST}:${STF_PROVIDER_MAX_PORT}",
           "automationName": "${AUTOMATION_NAME}"
         }
       ],
