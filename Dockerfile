@@ -1,5 +1,7 @@
 FROM ubuntu:16.04
 
+ENV delete_me qwe
+
 ENV ANDROID_HOME /opt/mcloud/android-sdk-linux
 ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
 
@@ -114,7 +116,7 @@ RUN apt-get -qqy update \
     && apt-get -qqy install ffmpeg
 
 # Clone STF
-RUN git clone --single-branch --branch master https://github.com/zebrunner/stf.git /opt/stf
+RUN git clone --single-branch --branch debug https://github.com/zebrunner/stf.git /opt/stf
 
 # Give permissions to our build user.
 RUN chown -R stf-build:stf-build /opt /app /usr/lib/node_modules/npm /var/lib/apt
