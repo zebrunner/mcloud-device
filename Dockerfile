@@ -39,6 +39,9 @@ ENV STF_PROVIDER_SCREEN_RESET false
 ENV STF_PROVIDER_VNC_INITIAL_SIZE 600x800
 ENV STF_PROVIDER_VNC_PORT 5900
 
+# #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
+ENV NODE_TLS_REJECT_UNAUTHORIZED 0
+
 
 ##################### STF ##################
 # Sneak the stf executable into $PATH.
