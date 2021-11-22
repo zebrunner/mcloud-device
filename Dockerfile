@@ -1,5 +1,6 @@
 FROM ubuntu:16.04
 
+# without adb we have Unhandled rejection Error: spawn adb ENOENT
 ENV ANDROID_HOME /opt/mcloud/android-sdk-linux
 ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
 
@@ -7,7 +8,7 @@ ENV SELENIUM_HUB_HOST selenium-hub
 ENV SELENIUM_HUB_PORT 4444
 ENV PROXY_PORT 9000
 
-ENV STF_PROVIDER_ADB_HOST adb
+ENV STF_PROVIDER_ADB_HOST appium
 ENV STF_PROVIDER_ADB_PORT 5037
 
 ENV STF_PROVIDER_PUBLIC_IP localhost
@@ -36,7 +37,6 @@ ENV STF_PROVIDER_VNC_PORT 5900
 
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED 0
-
 
 ##################### STF ##################
 # Sneak the stf executable into $PATH.
@@ -136,6 +136,7 @@ RUN set -x && \
 RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
     cd /opt/websockify && git checkout tags/v0.9.0 -b v0.9.0 && make
 
+#TODO: test ability to reuse stf-buil user as adb service moved into the independent docker image
 # Unable to use stf user as device can not be detected by adb!
 ## Switch to the app user.
 #USER stf

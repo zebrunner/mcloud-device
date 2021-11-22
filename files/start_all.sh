@@ -1,29 +1,5 @@
 #!/bin/bash
 
-
-#TODO: move into ADB docker image
-## wait until device is connected and authorized
-#unauthorized=0
-#available=0
-
-##TODO: for unauthorized device wait 60 sec and exit
-#while [[ "$unauthorized" -eq 0 && "$available" -eq 0 ]]
-#do
-#    sleep 3
-#    unauthorized=`adb devices | grep -c unauthorized`
-#    echo "unauthorized: $unauthorized"
-#    available=`adb devices | grep -c -w device`
-#    echo "available: $available"
-#done
-
-#info=""
-#while [[ "$info" == "" ]]
-#do
-#    info=`adb shell dumpsys display | grep -A 20 DisplayDeviceInfo`
-#    echo "info: ${info}"
-#    sleep 3
-#done
-
 export WEBSOCKIFY_CMD="/opt/websockify/run ${STF_PROVIDER_MAX_PORT} :5900"
 export SOCKET_PROTOCOL=ws
 export WEB_PROTOCOL=http
