@@ -1,9 +1,5 @@
 FROM ubuntu:16.04
 
-# without adb we have Unhandled rejection Error: spawn adb ENOENT
-ENV ANDROID_HOME /opt/mcloud/android-sdk-linux
-ENV PATH ${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools:$PATH
-
 ENV SELENIUM_HUB_HOST selenium-hub
 ENV SELENIUM_HUB_PORT 4444
 ENV PROXY_PORT 9000
@@ -133,13 +129,11 @@ RUN set -x && \
 RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
     cd /opt/websockify && git checkout tags/v0.9.0 -b v0.9.0 && make
 
-#TODO: test ability to reuse stf-buil user as adb service moved into the independent docker image
-# Unable to use stf user as device can not be detected by adb!
-## Switch to the app user.
-#USER stf
-
 USER root
 RUN rm -rf /tmp/* /var/tmp/*
+
+# Switch to the app user.
+USER stf
 
 CMD bash /opt/start_all.sh
 
