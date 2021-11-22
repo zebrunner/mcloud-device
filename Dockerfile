@@ -44,10 +44,8 @@ ENV PATH /app/bin:$PATH
 # Work in app dir by default.
 WORKDIR /app
 
-#COPY files/configgen.sh /opt/configgen.sh
 COPY files/healthcheck /usr/local/bin/
 
-COPY files/configgen.sh /opt/
 COPY files/start_all.sh /opt/
 
 RUN mkdir -p /opt/apk /var/lib/jenkins/workspace /app
@@ -99,8 +97,7 @@ RUN npm link --force node@8 \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
 
 # Reload cache after add location of graphic libraries
-    && ldconfig -v \
-    && chmod +x /opt/configgen.sh
+    && ldconfig -v
 
 # Install add-apt-repository and ffmpeg
 RUN apt-get -qqy update \
