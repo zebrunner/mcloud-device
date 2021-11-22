@@ -7,19 +7,14 @@ ENV SELENIUM_HUB_HOST selenium-hub
 ENV SELENIUM_HUB_PORT 4444
 ENV PROXY_PORT 9000
 
-ENV ADB_PORT 5037
+ENV STF_PROVIDER_ADB_HOST adb
+ENV STF_PROVIDER_ADB_PORT 5037
 
-# Appium related args
-ENV APPIUM_LOG_LEVEL debug
-ENV APPIUM_RELAXED_SECURITY --relaxed-security
-
-ENV STF_PROVIDER_NAME mcloud-android
 ENV STF_PROVIDER_PUBLIC_IP localhost
 ENV STF_PROVIDER_DEVICE_NAME device
-ENV DEVICE_UDID ab12345
 
 ENV STF_PROVIDER_HOST localhost
-ENV STF_PROVIDER_APPIUM_PORT 4723
+#ENV STF_PROVIDER_APPIUM_PORT 4723
 
 ENV STF_PROVIDER_CONNECT_SUB tcp://localhost:7250
 ENV STF_PROVIDER_CONNECT_PUSH tcp://localhost:7270
@@ -49,7 +44,7 @@ ENV PATH /app/bin:$PATH
 # Work in app dir by default.
 WORKDIR /app
 
-COPY files/configgen.sh /opt/configgen.sh
+#COPY files/configgen.sh /opt/configgen.sh
 COPY files/healthcheck /usr/local/bin/
 
 COPY files/configgen.sh /opt/
@@ -86,11 +81,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     net-tools \
     nano \
 
-# Install 8.x and 10.x node and npm (6.x)
+# Install 8.x and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get -qqy install nodejs \
-    && curl -sL https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get -qqy install nodejs
 
 #===============
 # Set JAVA_HOME
