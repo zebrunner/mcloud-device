@@ -95,13 +95,6 @@ RUN npm link --force node@8 \
 # Reload cache after add location of graphic libraries
     && ldconfig -v
 
-# Install add-apt-repository and ffmpeg
-RUN apt-get -qqy update \
-    && apt-get -qqy install software-properties-common \
-    && add-apt-repository ppa:jonathonf/ffmpeg-4 \
-    && apt-get -qqy update \
-    && apt-get -qqy install ffmpeg
-
 # Clone STF
 RUN git clone --single-branch --branch master https://github.com/zebrunner/stf.git /opt/stf
 
