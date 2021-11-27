@@ -58,7 +58,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     dpkg --add-architecture i386 && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && apt-get install -y \
-    openjdk-8-jdk \
     curl \
     gettext-base \
     lib32ncurses5 \
@@ -78,11 +77,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # Install 8.x and npm (6.x)
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get -qqy install nodejs
-
-#===============
-# Set JAVA_HOME
-#===============
-ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/jre"
 
 # Install STF dependencies
 RUN npm link --force node@8 \
