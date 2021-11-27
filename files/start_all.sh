@@ -22,34 +22,25 @@ fi
 
 ${WEBSOCKIFY_CMD} &
 
-npm link --force node@8
-sleep 3
-node --version
-
 stf provider --allow-remote \
         --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
         --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
 	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
 
 echo "---------------------------------------------------------"
-echo "processes after start:"
+echo "processes RIGHT AFTER START:"
 ps -ef
 echo "---------------------------------------------------------"
 
-# wait until backgroud processes exists for adb, websockify (python) and node (stf)
+# wait until backgroud processes exists for websockify (python) and node (stf)
 node_pids=`pidof node`
 python_pids=`pidof python`
-#adb_pids=`pidof adb`
 
-#echo wait -n $node_pids $python_pids $adb_pids
-#wait -n $node_pids $python_pids $adb_pids
-#echo wait -n $node_pids $python_pids
-#wait -n $node_pids $python_pids
-wait -n $python_pids
+wait -n $python_pids $node_pids
 
 
 echo "Exit status: $?"
 echo "---------------------------------------------------------"
-echo "processes before exit:"
+echo "processes BEFORE EXIT:"
 ps -ef
 echo "---------------------------------------------------------"
