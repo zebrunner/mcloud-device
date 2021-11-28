@@ -1,15 +1,8 @@
 #!/bin/bash
 
-# Android device container is considered healthy if adb, stf provider/cli and appium up&running
+# STF device container is considered healthy if stf provider/cli and appium up&running
 # 0 - healthy
 # 1 - unhealthy
-
-#ADB_STATUS=$(adb devices | grep -c ${DEVICE_UDID})
-#if [ ! "$ADB_STATUS" -eq "1" ]; then
-#  echo "ADB service is not detected!"
-#  pkill adb
-#  exit 1
-#fi
 
 stf_device_pid=`pgrep -f "cli device"`
 if [[ -z $stf_device_pid ]]; then
@@ -18,11 +11,11 @@ if [[ -z $stf_device_pid ]]; then
   exit 1
 fi
 
-curl --silent http://localhost:${STF_PROVIDER_APPIUM_PORT}/wd/hub/status | grep "\"status\":0"
-if [[ ! $? -eq 0 ]]; then
-  echo "Appium service is not detected!"
-  pkill node
-  exit 1
-fi
+#curl --silent http://localhost:${STF_PROVIDER_APPIUM_PORT}/wd/hub/status | grep "\"status\":0"
+#if [[ ! $? -eq 0 ]]; then
+#  echo "Appium service is not detected!"
+#  pkill node
+#  exit 1
+#fi
 
 exit 0
