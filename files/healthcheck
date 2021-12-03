@@ -4,7 +4,7 @@
 # 0 - healthy
 # 1 - unhealthy
 
-stf_device_pid=`pgrep -f "cli device"`
+stf_device_pid=`pgrep -f "cli"`
 if [[ -z $stf_device_pid ]]; then
   echo "STF device cli is not detected!"
   pkill node
