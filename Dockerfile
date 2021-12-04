@@ -85,8 +85,9 @@ RUN npm link --force node@8 \
 # Reload cache after add location of graphic libraries
     && ldconfig -v
 
+#TODO: switch to master before the release
 # Clone STF
-RUN git clone --single-branch --branch master https://github.com/zebrunner/stf.git /opt/stf
+RUN git clone --single-branch --branch "develop" https://github.com/zebrunner/stf.git /opt/stf
 
 # Give permissions to our build user.
 RUN chown -R stf-build:stf-build /opt /app /usr/lib/node_modules/npm /var/lib/apt
@@ -103,7 +104,7 @@ RUN set -x && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
     bower cache clean && \
     npm prune --production && \
-    mv node_modules/* /app/node_modules/ && \
+#    mv node_modules/* /app/node_modules/ && \
 #    npm cache clean && \
     rm -rf /var/lib/apt/lists/* ~/.node-gyp && \
     cd /app
