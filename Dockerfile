@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM zebrunner/stf:2.0-beta1
 
 ENV STF_PROVIDER_ADB_HOST appium
 ENV STF_PROVIDER_ADB_PORT 5037
@@ -30,94 +30,16 @@ ENV STF_PROVIDER_VNC_PORT 5900
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED 0
 
-##################### STF ##################
-# Sneak the stf executable into $PATH.
-ENV PATH /app/bin:$PATH
-# Work in app dir by default.
-WORKDIR /app
+# Switch to the app user.
+USER stf
 
 COPY files/healthcheck /usr/local/bin/
 
 COPY files/start_all.sh /opt/
 
-RUN mkdir -p /opt/apk /var/lib/jenkins/workspace /app
-
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf-build && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf && \
-    dpkg --add-architecture i386 && \
-    sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
-    apt-get update && apt-get install -y \
-    curl \
-    gettext-base \
-    lib32ncurses5 \
-    lib32stdc++6 \
-    lib32z1 \
-    unzip \
-    wget \
-    python build-essential  \
-    libgtk2.0-0:i386 \
-    libnss3-dev \
-    libgconf-2-4 \
-    dnsutils \
-    telnet \
-    net-tools \
-    nano \
-
-# Install 8.x and npm (6.x)
-    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get -qqy install nodejs
-
-# Install STF dependencies
-RUN npm link --force node@8 \
-    && su stf-build -s /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' \
-    && apt-get -qqy update \
-    && apt-get -qqy install libzmq3-dev libprotobuf-dev git graphicsmagick yasm \
-    && apt-get clean \
-    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
-
-# Reload cache after add location of graphic libraries
-    && ldconfig -v
-
-#TODO: switch to master before the release
-# Clone STF
-RUN git clone --single-branch --branch "develop" https://github.com/zebrunner/stf.git /opt/stf
-
-# Give permissions to our build user.
-RUN chown -R stf-build:stf-build /opt /app /usr/lib/node_modules/npm /var/lib/apt
-
-# Switch over to the build user.
-USER stf-build
-
-# Run the build.
-RUN set -x && \
-    cd /opt/stf && \
-    export PATH=$PWD/node_modules/.bin:$PATH && \
-    npm install --loglevel http && \
-    npm pack && \
-    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    bower cache clean && \
-    npm prune --production && \
-#    mv node_modules/* /app/node_modules/ && \
-#    npm cache clean && \
-    rm -rf /var/lib/apt/lists/* ~/.node-gyp && \
-    cd /app
-
-# Install websockify
-RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
-    cd /opt/websockify && git checkout tags/v0.9.0 -b v0.9.0 && make
-
-USER root
-RUN rm -rf /tmp/* /var/tmp/*
-
-# Switch to the app user.
-USER stf
+## Install websockify
+#RUN git clone https://github.com/novnc/websockify.git /opt/websockify && \
+#    cd /opt/websockify && git checkout tags/v0.9.0 -b v0.9.0 && make
 
 CMD bash /opt/start_all.sh
 
