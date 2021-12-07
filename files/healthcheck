@@ -11,11 +11,4 @@ if [[ -z $stf_device_pid ]]; then
   exit 1
 fi
 
-#curl --silent http://localhost:${STF_PROVIDER_APPIUM_PORT}/wd/hub/status | grep "\"status\":0"
-#if [[ ! $? -eq 0 ]]; then
-#  echo "Appium service is not detected!"
-#  pkill node
-#  exit 1
-#fi
-
 exit 0
