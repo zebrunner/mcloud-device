@@ -1,12 +1,13 @@
-FROM zebrunner/stf:2.0-beta2
+FROM zebrunner/stf:2.0-beta6
 
 ENV STF_PROVIDER_ADB_HOST appium
 ENV STF_PROVIDER_ADB_PORT 5037
 
 ENV STF_PROVIDER_PUBLIC_IP localhost
-ENV PUBLIC_IP_PORT=80
-ENV PUBLIC_IP_PROTOCOL=http
+ENV PUBLIC_IP_PORT 80
+ENV PUBLIC_IP_PROTOCOL http
 
+ENV PLATFORM_NAME android
 ENV STF_PROVIDER_DEVICE_NAME device
 
 ENV STF_PROVIDER_HOST localhost
@@ -35,9 +36,7 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED 0
 USER stf
 
 COPY files/healthcheck /usr/local/bin/
-
 COPY files/start_all.sh /opt/
-
 CMD bash /opt/start_all.sh
 
 HEALTHCHECK CMD ["healthcheck"]
