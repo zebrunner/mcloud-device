@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.0-beta6
+FROM zebrunner/stf:2.0-beta8
 
 ENV STF_PROVIDER_ADB_HOST=appium
 ENV STF_PROVIDER_ADB_PORT=5037
