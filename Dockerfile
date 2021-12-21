@@ -1,6 +1,7 @@
 FROM zebrunner/stf:2.0-beta16
 
-# #267 gray screen on android after 48 hours without restart
+# https://github.com/zebrunner/android-device/issues/70
+#    gray screen on android after 48 hours without restart
 # https://github.com/openstf/stf/issues/100
 ENV ZMQ_TCP_KEEPALIVE=1
 ENV ZMQ_TCP_KEEPALIVE_IDLE=600
