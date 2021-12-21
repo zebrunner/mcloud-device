@@ -1,4 +1,11 @@
-FROM zebrunner/stf:2.0-beta8
+FROM zebrunner/stf:2.0-beta16
+
+# #267 gray screen on android after 48 hours without restart
+# https://github.com/openstf/stf/issues/100
+ENV ZMQ_TCP_KEEPALIVE=1
+ENV ZMQ_TCP_KEEPALIVE_IDLE=600
+#ENV ZMQ_IPV6=
+
 
 ENV STF_PROVIDER_ADB_HOST=appium
 ENV STF_PROVIDER_ADB_PORT=5037
