@@ -26,10 +26,28 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
-  # install and start wda, populate specific iOS device data
-  . /opt/start-wda.sh
-  echo WDA_HOST: $WDA_HOST
-  echo WDA_PORT: $WDA_PORT
+  #wait until WDA_ENV file exists to read appropriate variables
+  for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
+  do
+   if [ -f ${WDA_ENV} ]
+    then
+     cat ${WDA_ENV}
+     break
+    else
+     echo "Waiting until WDA settings appear $i sec"
+     sleep 1
+   fi
+  done
+
+  if [ ! -f ${WDA_ENV} ]; then
+    echo "ERROR! Unable to get WDA settings from STF!"
+    exit -1
+  fi
+
+  #source wda.env file
+  source ${WDA_ENV}
+  . ${WDA_ENV}
+  export
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
