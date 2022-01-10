@@ -8,7 +8,7 @@ Feel free to support the development with a [**donation**](https://www.paypal.co
 </p>
 
 MCloud Device is docker image with enhanced STF provider service for Android and iOS devices.
-Follow [MCloud](https://github.com/zebrunner/mcloud) instructions to reuse this image effectively for automation and manual testing on real devices.
+Follow [MCloud](https://github.com/zebrunner/mcloud) instructions to reuse this image effectively for manual and automated testing.
 
 ## Documentation and free support
 * [Zebrunner PRO](https://zebrunner.com)
