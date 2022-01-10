@@ -11,18 +11,4 @@ if [[ -z $stf_device_pid ]]; then
   exit 1
 fi
 
-#Hit the WDA status URL to see if it is available
-if [ -f ${WDA_ENV} ]; then
-  source ${WDA_ENV}
-  #Hit WDA status URL to see if it is available
-  if curl -Is "http://$WDA_HOST:$WDA_PORT/status" | head -1 | grep -q '200 OK'
-  then
-    echo "[$(date +'%d/%m/%Y %H:%M:%S')] WDA is up and running. Nothing to do"
-  else
-    echo "[$(date +'%d/%m/%Y %H:%M:%S')] WDA service is unhealthy!"
-    pkill node
-    exit 1
-  fi
-fi
-
 exit 0
