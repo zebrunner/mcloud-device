@@ -1,99 +1,90 @@
 #!/bin/bash
 
-
-# wait until device is connected and authorized
-unauthorized=0
-available=0
-
-#TODO: for unauthorized device wait 60 sec and exit
-while [[ "$unauthorized" -eq 0 && "$available" -eq 0 ]]
-do
-    sleep 3
-    unauthorized=`adb devices | grep -c unauthorized`
-    echo "unauthorized: $unauthorized"
-    available=`adb devices | grep -c -w device`
-    echo "available: $available"
-done
-
-info=""
-while [[ "$info" == "" ]]
-do
-    info=`adb shell dumpsys display | grep -A 20 DisplayDeviceInfo`
-    echo "info: ${info}"
-    sleep 3
-done
-
-export WEBSOCKIFY_CMD="/opt/websockify/run ${STF_PROVIDER_MAX_PORT} :5900"
-export SOCKET_PROTOCOL=ws
-export WEB_PROTOCOL=http
-
-if [ -f /opt/nginx/ssl/ssl.crt ] && [ /opt/nginx/ssl/ssl.key ]; then
-    export WEBSOCKIFY_CMD="/opt/websockify/run ${STF_PROVIDER_MAX_PORT} :5900 --ssl-only --cert /opt/nginx/ssl/ssl.crt --key /opt/nginx/ssl/ssl.key"
-    export SOCKET_PROTOCOL=wss
-    export WEB_PROTOCOL=https
-fi
-
-#execute to print info in stdout
-. /opt/configgen.sh
-# generate json file
-/opt/configgen.sh > /opt/nodeconfig.json
-
-APPIUM_HOME=/opt/mcloud/appium/node_modules/appium
-
-# uninstall appium specific
-echo "uninstalling io.appium.* apps..."
-adb uninstall io.appium.uiautomator2.server.test > /dev/null 2>&1
-adb uninstall io.appium.uiautomator2.server > /dev/null 2>&1
-adb uninstall io.appium.settings > /dev/null 2>&1
-adb uninstall io.appium.unlock > /dev/null 2>&1
-echo "io.appium.* apps uninstalled."
+#converting to lower case just in case
+PLATFORM_NAME=${PLATFORM_NAME,,}
+PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_PROVIDER_HOST}" ]; then
-      #STF_PROVIDER_HOST is empty
-      STF_PROVIDER_HOST=${STF_PROVIDER_PUBLIC_IP}
+  # when STF_PROVIDER_HOST is empty
+  STF_PROVIDER_HOST=${STF_PROVIDER_PUBLIC_IP}
 fi
 
-if [ ! -f /usr/bin/java ]; then
-  ln -s /usr/lib/jvm/java-8-openjdk-amd64/bin/java /usr/bin/java
+SOCKET_PROTOCOL=ws
+if [ "${PUBLIC_IP_PROTOCOL}" == "https" ]; then
+  SOCKET_PROTOCOL=wss
 fi
 
-${WEBSOCKIFY_CMD} &
 
-which node
+if [ "${PLATFORM_NAME}" == "android" ]; then
 
-npm link --force node@10
-sleep 3
-node --version
-node ${APPIUM_HOME} -p ${STF_PROVIDER_APPIUM_PORT} --log-timestamp --session-override --udid ${DEVICE_UDID} ${APPIUM_RELAXED_SECURITY} \
-           --nodeconfig /opt/nodeconfig.json --automation-name ${AUTOMATION_NAME} --log-level ${APPIUM_LOG_LEVEL} > /tmp/appium.log 2>&1 &
+  # stf provider for Android
+  stf provider --allow-remote \
+    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
+    --storage-url ${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/ \
+    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
 
-sleep 5
+elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
-npm link --force node@8
-sleep 3
-node --version
+  #wait until WDA_ENV file exists to read appropriate variables
+  for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
+  do
+   if [ -f ${WDA_ENV} ]
+    then
+     cat ${WDA_ENV}
+     break
+    else
+     echo "Waiting until WDA settings appear $i sec"
+     sleep 1
+   fi
+  done
 
-stf provider \
-        --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
-        --storage-url ${WEB_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/ \
-	--screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
+  if [ ! -f ${WDA_ENV} ]; then
+    echo "ERROR! Unable to get WDA settings from STF!"
+    exit -1
+  fi
+
+  #source wda.env file
+  source ${WDA_ENV}
+  . ${WDA_ENV}
+  export
+
+  #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
+#    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
+
+  node /app/lib/cli ios-device --serial ${DEVICE_UDID} \
+    --device-name ${STF_PROVIDER_DEVICE_NAME} \
+    --device-type phone \
+    --host ${STF_PROVIDER_HOST} \
+    --screen-port ${STF_PROVIDER_MIN_PORT} \
+    --connect-port ${MJPEG_PORT} \
+    --provider ${STF_PROVIDER_NAME} \
+    --public-ip ${STF_PROVIDER_PUBLIC_IP} \
+    --group-timeout ${STF_PROVIDER_GROUP_TIMEOUT} \
+    --storage-url ${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/ \
+    --screen-jpeg-quality ${STF_PROVIDER_SCREEN_JPEG_QUALITY} --screen-ping-interval ${STF_PROVIDER_SCREEN_PING_INTERVAL} \
+    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/${DEVICE_UDID}/${STF_PROVIDER_MIN_PORT}/" \
+    --boot-complete-timeout ${STF_PROVIDER_BOOT_COMPLETE_TIMEOUT} --mute-master ${STF_PROVIDER_MUTE_MASTER} \
+    --connect-push ${STF_PROVIDER_CONNECT_PUSH} --connect-sub ${STF_PROVIDER_CONNECT_SUB} \
+    --connect-app-dealer tcp://stf-triproxy-app:7160 --connect-dev-dealer tcp://stf-triproxy-dev:7260 \
+    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
+    --wda-host ${WDA_HOST} --wda-port ${WDA_PORT} \
+    --appium-port ${STF_PROVIDER_APPIUM_PORT} &
+
+fi
 
 echo "---------------------------------------------------------"
-echo "processes after start:"
+echo "processes RIGHT AFTER START:"
 ps -ef
 echo "---------------------------------------------------------"
 
-# wait until backgroud processes exists for adb, websockify (python) and node (appium, stf)
+# wait until backgroud processes exists for node (stf)
 node_pids=`pidof node`
-python_pids=`pidof python`
-adb_pids=`pidof adb`
+wait -n $node_pids
 
-echo wait -n $node_pids $python_pids $adb_pids
-wait -n $node_pids $python_pids $adb_pids
 
 echo "Exit status: $?"
 echo "---------------------------------------------------------"
-echo "processes before exit:"
+echo "processes BEFORE EXIT:"
 ps -ef
 echo "---------------------------------------------------------"
