@@ -92,6 +92,6 @@ echo "---------------------------------------------------------"
 #73: reuse usbreset feature for the problematic android containers
 #let's try to do forcibly usbreset on exit when node is crashed/exited/killed
 if [ "${PLATFORM_NAME}" == "android" ]; then
-    echo doing usbreset forcibly on /dev/device-${STF_PROVIDER_DEVICE_NAME}-${DEVICE_UDID}
-    usbreset /dev/device-${STF_PROVIDER_DEVICE_NAME}-${DEVICE_UDID}
+    echo doing usbreset forcibly on attached device
+    usbreset ${DEVICE_BUS}
 fi

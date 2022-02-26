@@ -39,6 +39,9 @@ ENV STF_PROVIDER_VNC_PORT=5900
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
+# #73 reuse usbreset feature for the problematic android containers
+ENV DEVICE_BUS=/dev/bus/usb/003/011
+
 # Switch to the app user.
 USER stf
 
