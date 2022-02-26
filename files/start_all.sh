@@ -88,3 +88,10 @@ echo "---------------------------------------------------------"
 echo "processes BEFORE EXIT:"
 ps -ef
 echo "---------------------------------------------------------"
+
+#73: reuse usbreset feature for the problematic android containers
+#let's try to do forcibly usbreset on exit when node is crashed/exited/killed
+if [ "${PLATFORM_NAME}" == "android" ]; then
+    echo doing usbreset forcibly...
+    usbreset ${DEVICE_BUS}
+fi
