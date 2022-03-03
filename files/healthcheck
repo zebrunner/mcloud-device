@@ -13,12 +13,11 @@ fi
 
 #Hit the Appium status URL to see if it is available
 # "appium" is linked container name so we can use it hostname for extra verification
-if curl --retry 6 --retry-delay 10 -Is "http://appium:4723/wd/hub/status" | head -1 | grep -q '200 OK'
+if curl --retry 3 --retry-delay 10 -Is "http://appium:4723/wd/hub/status" | head -1 | grep -q '200 OK'
 then
   echo "Appium containr is already running. Nothing to do"
 else
   echo "Appium container is unhealthy!"
-  pkill node
   exit 1
 fi
 
