@@ -15,7 +15,7 @@ fi
 # "appium" is linked container name so we can use it hostname for extra verification
 if curl --retry 3 --retry-delay 10 -Is "http://appium:4723/wd/hub/status" | head -1 | grep -q '200 OK'
 then
-  echo "Appium containr is already running. Nothing to do"
+  echo "Appium containr is up and running."
 else
   echo "Appium container is unhealthy!"
   exit 1
