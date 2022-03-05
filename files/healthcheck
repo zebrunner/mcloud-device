@@ -7,7 +7,8 @@
 stf_device_pid=`pgrep -f "cli"`
 if [[ -z $stf_device_pid ]]; then
   echo "STF device cli is not detected!"
-  pkill node
+  #pkill node
+  /opt/start_all.sh
   exit 1
 fi
 
