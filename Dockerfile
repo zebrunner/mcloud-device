@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.0
+FROM zebrunner/stf:2.1-beta37
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -44,6 +44,8 @@ ENV DEVICE_BUS=/dev/bus/usb/003/011
 
 # Switch to the app user.
 USER stf
+# Use root user only in debunning purposes
+#USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/usbreset /usr/local/bin/
