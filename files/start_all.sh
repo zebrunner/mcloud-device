@@ -73,25 +73,18 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
 fi
 
-echo "---------------------------------------------------------"
-echo "processes RIGHT AFTER START:"
-ps -ef
-echo "---------------------------------------------------------"
-
 # wait until backgroud processes exists for node (stf)
 node_pids=`pidof node`
 wait -n $node_pids
 
+exit_status=$?
+echo "Exit status: $exit_status"
 
-echo "Exit status: $?"
-echo "---------------------------------------------------------"
-echo "processes BEFORE EXIT:"
-ps -ef
-echo "---------------------------------------------------------"
-
-
+#TODO: #85 define exit strategy from container on exiit
 # do always restart until appium container state is not Exited!
-!!!
+# for android stop of the appium container crash stf asap so verification of the appium container required only for iOS
+exit $exit_status
+
 #TODO: temporary commented usbreset to test exit(0) on appium container
 ##73: reuse usbreset feature for the problematic android containers
 ##let's try to do forcibly usbreset on exit when node is crashed/exited/killed
