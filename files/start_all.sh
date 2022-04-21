@@ -22,7 +22,7 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
   stf provider --allow-remote \
     --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
     --storage-url ${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/ \
-    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" &
+    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/"
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
@@ -69,13 +69,9 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
     --connect-app-dealer tcp://stf-triproxy-app:7160 --connect-dev-dealer tcp://stf-triproxy-dev:7260 \
     --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
     --wda-host ${WDA_HOST} --wda-port ${WDA_PORT} \
-    --appium-port ${STF_PROVIDER_APPIUM_PORT} &
+    --appium-port ${STF_PROVIDER_APPIUM_PORT}
 
 fi
-
-# wait until backgroud processes exists for node (stf)
-node_pids=`pidof node`
-wait -n $node_pids
 
 exit_status=$?
 echo "Exit status: $exit_status"

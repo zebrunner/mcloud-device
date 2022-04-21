@@ -7,19 +7,19 @@
 stf_device_pid=`pgrep -f "cli"`
 if [[ -z $stf_device_pid ]]; then
   echo "STF device cli is not detected!"
-  pkill node
+  #pkill node
   exit 1
 fi
 
-#Hit the Appium status URL to see if it is available
-# "appium" is linked container name so we can use it hostname for extra verification
-if curl --retry 3 --retry-delay 10 -Is "http://appium:4723/wd/hub/status" | head -1 | grep -q '200 OK'
-then
-  echo "Linked appium container is up and running."
-else
-  echo "Linked appium container is unhealthy!"
-  pkill node
-  exit 1
-fi
+##Hit the Appium status URL to see if it is available
+## "appium" is linked container name so we can use it hostname for extra verification
+#if curl --retry 3 --retry-delay 10 -Is "http://appium:4723/wd/hub/status" | head -1 | grep -q '200 OK'
+#then
+#  echo "Linked appium container is up and running."
+#else
+#  echo "Linked appium container is unhealthy!"
+#  pkill node
+#  exit 1
+#fi
 
 exit 0
