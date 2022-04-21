@@ -89,9 +89,13 @@ echo "processes BEFORE EXIT:"
 ps -ef
 echo "---------------------------------------------------------"
 
-#73: reuse usbreset feature for the problematic android containers
-#let's try to do forcibly usbreset on exit when node is crashed/exited/killed
-if [ "${PLATFORM_NAME}" == "android" ]; then
-    echo doing usbreset forcibly on attached device
-    usbreset ${DEVICE_BUS}
-fi
+
+# do always restart until appium container state is not Exited!
+!!!
+#TODO: temporary commented usbreset to test exit(0) on appium container
+##73: reuse usbreset feature for the problematic android containers
+##let's try to do forcibly usbreset on exit when node is crashed/exited/killed
+#if [ "${PLATFORM_NAME}" == "android" ]; then
+#    echo doing usbreset forcibly on attached device
+#    usbreset ${DEVICE_BUS}
+#fi
