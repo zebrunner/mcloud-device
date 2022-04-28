@@ -48,6 +48,8 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   source ${WDA_ENV}
   . ${WDA_ENV}
   export
+  # #91: remove WDA_ENV file before starting stf
+  rm -f ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
