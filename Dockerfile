@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.1
+FROM zebrunner/stf:2.2-beta4
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -42,10 +42,10 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 # #73 reuse usbreset feature for the problematic android containers
 ENV DEVICE_BUS=/dev/bus/usb/003/011
 
-# Switch to the app user.
-USER stf
-## Use root user only in debugging purposes
-#USER root
+## Switch to the app user.
+#USER stf
+# Use root user only in debugging purposes
+USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/usbreset /usr/local/bin/
