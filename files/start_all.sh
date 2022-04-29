@@ -29,7 +29,7 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   #wait until WDA_ENV file exists to read appropriate variables
   for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
   do
-   if [ -f ${WDA_ENV} ] && [ ! -s ${WDA_ENV} ]; then
+   if [ -f ${WDA_ENV} ] && [ -s ${WDA_ENV} ]; then
      cat ${WDA_ENV}
      break
    else
