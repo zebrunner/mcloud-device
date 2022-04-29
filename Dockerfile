@@ -39,6 +39,13 @@ ENV STF_PROVIDER_VNC_PORT=5900
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
+# WebDriverAgent vars
+ENV WDA_PORT=8100
+ENV MJPEG_PORT=8101
+ENV WDA_ENV=/opt/zebrunner/wda.env
+ENV WDA_LOG_FILE=/opt/zebrunner/wda.log
+ENV WDA_WAIT_TIMEOUT=30
+
 # Switch to the app user.
 USER stf
 ## Use root user only in debugging purposes
