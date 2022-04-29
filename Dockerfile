@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.2-beta4
+FROM zebrunner/stf:2.1.1-beta1
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -42,7 +42,7 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 # Switch to the app user.
 USER stf
 ## Use root user only in debugging purposes
-U#SER root
+#USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
