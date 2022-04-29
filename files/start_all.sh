@@ -29,11 +29,10 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   #wait until WDA_ENV file exists to read appropriate variables
   for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
   do
-   if [ -f ${WDA_ENV} ]
-    then
+   if [ -f ${WDA_ENV} ] && [ ! -s ${WDA_ENV} ]; then
      cat ${WDA_ENV}
      break
-    else
+   else
      echo "Waiting until WDA settings appear $i sec"
      sleep 1
    fi
@@ -48,9 +47,9 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   source ${WDA_ENV}
   . ${WDA_ENV}
   export
-  #commented so far to test socket connection
-#  # #91: remove WDA_ENV file before starting stf
-#  rm -f ${WDA_ENV}
+  # #91: remove WDA_ENV file before starting stf
+  # as we don't have enough permissions to remove we will reset its content completely
+  echo > ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
