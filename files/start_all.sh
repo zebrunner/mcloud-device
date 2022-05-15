@@ -29,11 +29,43 @@ fi
 
 if [ "${PLATFORM_NAME}" == "android" ]; then
 
-  # stf provider for Android
-  stf provider --allow-remote \
-    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
+#  # stf provider for Android
+#  stf provider --allow-remote \
+#    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
+#    --storage-url ${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/ \
+#    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/"
+
+  args=""
+  if [ "${STF_PROVIDER_CLEANUP}" == "true" ]; then
+    args="$args --no-cleanup"
+  fi
+
+  if [ "${STF_PROVIDER_SCREEN_RESET}" == "true" ]; then
+    args="$args --no-screen-reset"
+  fi
+
+STF_PROVIDER_SCREEN_RESET
+
+  node /app/lib/cli device --serial ${DEVICE_UDID} \
+    --device-name ${STF_PROVIDER_DEVICE_NAME} \
+    --host ${STF_PROVIDER_HOST} \
+    --screen-port ${STF_PROVIDER_MIN_PORT} \
+    --connect-port $((STF_PROVIDER_MIN_PORT + 1)) \
+    --vnc-port ${STF_PROVIDER_VNC_PORT} \
+    --provider ${STF_PROVIDER_NAME} \
+    --public-ip ${STF_PROVIDER_PUBLIC_IP} \
+    --group-timeout ${STF_PROVIDER_GROUP_TIMEOUT} \
     --storage-url ${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/ \
-    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/"
+    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
+    --screen-jpeg-quality ${STF_PROVIDER_SCREEN_JPEG_QUALITY} --screen-ping-interval ${STF_PROVIDER_SCREEN_PING_INTERVAL} \
+    --boot-complete-timeout ${STF_PROVIDER_BOOT_COMPLETE_TIMEOUT} --mute-master ${STF_PROVIDER_MUTE_MASTER} \
+    --connect-push ${STF_PROVIDER_CONNECT_PUSH} --connect-sub ${STF_PROVIDER_CONNECT_SUB} \
+    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
+    --adb-host ${STF_PROVIDER_ADB_HOST} \
+    --adb-port ${STF_PROVIDER_ADB_PORT} \
+    --appium-port ${STF_PROVIDER_APPIUM_PORT} \
+    --heartbeat-interval ${STF_PROVIDER_HEARTBEAT_INTERVAL} \
+    --vnc-initial-size ${STF_PROVIDER_VNC_INITIAL_SIZE} ${args}
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
@@ -64,7 +96,6 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   # > ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
-#    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
 
   node /app/lib/cli ios-device --serial ${DEVICE_UDID} \
     --device-name ${STF_PROVIDER_DEVICE_NAME} \
@@ -87,10 +118,6 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
 fi
 
-exit_status=$?
-echo "Exit status: $exit_status"
+# forcibly exit with error code to initiate restart
+exit 1
 
-#TODO: #85 define exit strategy from container on exiit
-# do always restart until appium container state is not Exited!
-# for android stop of the appium container crash stf asap so verification of the appium container required only for iOS
-exit $exit_status
