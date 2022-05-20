@@ -46,10 +46,10 @@ ENV WDA_ENV=/opt/zebrunner/wda.env
 ENV WDA_LOG_FILE=/opt/zebrunner/wda.log
 ENV WDA_WAIT_TIMEOUT=30
 
-## Switch to the app user.
-#USER stf
-# Use root user only in debugging purposes
-USER root
+# Switch to the app user.
+USER stf
+## Use root user only in debugging purposes
+#USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
