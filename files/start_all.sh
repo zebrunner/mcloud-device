@@ -13,10 +13,9 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   ios list | grep $DEVICE_UDID
   if [ $? == 1 ]; then
-    #TODO: #100: find a way to reanimate connected iOS device which is not recognized by go ios utility
     echo "Device is not available!"
-    # exit with status 0 to stop stf device container restart
-    exit 0
+    # exit with status 1 to initiate stf device container restart
+    exit 1
   fi
 fi
 
