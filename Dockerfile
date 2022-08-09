@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.3-beta21
+FROM zebrunner/stf:2.3-beta23
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
