@@ -5,12 +5,17 @@ PLATFORM_NAME=${PLATFORM_NAME,,}
 PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
+  # start socat client and connect to appium usbmuxd socket
+  rm -f /var/run/usbmuxd
+  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:appium:22 &
+
+  sleep 5
+
   ios list | grep $DEVICE_UDID
   if [ $? == 1 ]; then
-    #TODO: #100: find a way to reanimate connected iOS device which is not recognized by go ios utility
     echo "Device is not available!"
-    # exit with status 0 to stop stf device container restart
-    exit 0
+    # exit with status 1 to initiate stf device container restart
+    exit 1
   fi
 fi
 
