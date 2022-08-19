@@ -48,7 +48,7 @@ ENV WDA_WAIT_TIMEOUT=30
 
 ## Switch to the app user.
 #USER stf
-# Use root user only in debugging purposes
+# Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
 COPY files/healthcheck /usr/local/bin/
