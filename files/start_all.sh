@@ -45,16 +45,22 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
-  #wait until WDA_ENV file exists to read appropriate variables
+  #wait until fresh WDA_ENV file not generated to read appropriate variables
   for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
   do
-   if [ -f ${WDA_ENV} ] && [ -s ${WDA_ENV} ]; then
-     cat ${WDA_ENV}
-     break
-   else
-     echo "Waiting until WDA settings appear $i sec"
-     sleep 1
-   fi
+    if [ ! -f ${WDA_ENV} ]; then
+      echo "Waiting $i sec until ${WDA_ENV} file appear..."
+      sleep 1
+    else
+      source ${WDA_ENV}
+      if [ "${WDA_ENV_USED}" == "true" ]; then
+        echo "Waiting $i sec until fresh WDA settings appear..."
+        sleep 1
+      else
+        cat ${WDA_ENV}
+        break
+      fi
+    fi
   done
 
   if [ ! -f ${WDA_ENV} ]; then
@@ -64,12 +70,9 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
   #source wda.env file
   source ${WDA_ENV}
-  . ${WDA_ENV}
   export
-  # #91: remove WDA_ENV file before starting stf
-  # as we don't have enough permissions to remove we will reset its content completely
-  # uncommented reset as appium healthcheck not uses anymore WDA_ENV file
-  > ${WDA_ENV}
+  # #91: use WDA_ENV vars at once for provider startup
+  echo "export WDA_ENV_USED=true" >> ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
