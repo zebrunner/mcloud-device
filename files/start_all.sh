@@ -68,8 +68,8 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   export
   # #91: remove WDA_ENV file before starting stf
   # as we don't have enough permissions to remove we will reset its content completely
-  # commented reset as this file is used by appium healthcheck
-  # > ${WDA_ENV}
+  # uncommented reset as appium healthcheck not uses anymore WDA_ENV file
+  > ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
