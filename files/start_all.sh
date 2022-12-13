@@ -46,6 +46,8 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
       echo "Waiting $i sec until ${WDA_ENV} file appear..."
       sleep 1
     else
+      # reset WDA_CRASHED to source latest variant
+      WDA_CRASHED=
       source ${WDA_ENV}
       if [ "${WDA_CRASHED}" == "true" ]; then
         echo "Waiting $i sec until fresh WDA settings appear..."
