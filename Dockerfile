@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.4-beta5
+FROM zebrunner/stf:2.4-beta6
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -17,7 +17,6 @@ ENV PUBLIC_IP_PROTOCOL=http
 ENV PLATFORM_NAME=android
 ENV STF_PROVIDER_DEVICE_NAME=
 
-ENV STF_PROVIDER_HOST=localhost
 ENV STF_PROVIDER_CONNECT_SUB=tcp://localhost:7250
 ENV STF_PROVIDER_CONNECT_PUSH=tcp://localhost:7270
 
