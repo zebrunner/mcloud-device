@@ -44,34 +44,16 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
-  #wait until fresh WDA_ENV file not generated to read appropriate variables
-  for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
-  do
-    if [ ! -f ${WDA_ENV} ]; then
-      echo "Waiting $i sec until ${WDA_ENV} file appear..."
-      sleep 1
-    else
-      # reset WDA_CRASHED to source latest variant
-      WDA_CRASHED=
-      source ${WDA_ENV}
-      if [ "${WDA_CRASHED}" == "true" ]; then
-        echo "Waiting $i sec until fresh WDA settings appear..."
-        sleep 1
-      else
-        cat ${WDA_ENV}
-        break
-      fi
-    fi
-  done
-
-  if [ ! -f ${WDA_ENV} ]; then
-    echo "ERROR! Unable to get WDA settings as ${WDA_ENV} file not exists!"
+  ##Hit the WDA status URL to see if it is available
+  RETRY_DELAY=$(( $WDA_WAIT_TIMEOUT / 3 ))
+  if curl --retry 3 --retry-delay ${RETRY_DELAY} -Is "http://${WDA_HOST}:${WDA_PORT}/status" | head -1 | grep -q '200 OK'
+  then
+    echo "Linked appium container is up and running."
+  else
+    echo "ERROR! Unable to get WDA status successfully!"
     exit -1
   fi
 
-  #source wda.env file
-  source ${WDA_ENV}
-  export
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \

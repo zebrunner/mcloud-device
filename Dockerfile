@@ -40,10 +40,9 @@ ENV STF_PROVIDER_VNC_PORT=5900
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # WebDriverAgent vars
+ENV WDA_HOST=appium
 ENV WDA_PORT=8100
 ENV MJPEG_PORT=8101
-ENV WDA_ENV=/opt/zebrunner/wda.env
-ENV WDA_LOG_FILE=/opt/zebrunner/wda.log
 ENV WDA_WAIT_TIMEOUT=30
 
 ## Switch to the app user.
