@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.4-beta9
+FROM zebrunner/stf:2.4-beta10
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -45,10 +45,10 @@ ENV WDA_PORT=8100
 ENV MJPEG_PORT=8101
 ENV WDA_WAIT_TIMEOUT=30
 
-## Switch to the app user.
-#USER stf
-# Need root user to clear existing /var/run/usbmuxd socket if any
-USER root
+# Switch to the app user.
+USER stf
+## Need root user to clear existing /var/run/usbmuxd socket if any
+#USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
