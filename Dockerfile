@@ -45,10 +45,8 @@ ENV WDA_PORT=8100
 ENV MJPEG_PORT=8101
 ENV WDA_WAIT_TIMEOUT=30
 
-# Switch to the app user.
-USER stf
-## Need root user to clear existing /var/run/usbmuxd socket if any
-#USER root
+# Need root user to clear existing /var/run/usbmuxd socket if any
+USER root
 
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
