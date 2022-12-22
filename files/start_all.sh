@@ -22,7 +22,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   fi
 fi
 
-
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
 if [ -z "${STF_PROVIDER_HOST}" ]; then
   # when STF_PROVIDER_HOST is empty
@@ -45,31 +44,16 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
 
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
-  #wait until WDA_ENV file exists to read appropriate variables
-  for ((i=1; i<=$WDA_WAIT_TIMEOUT; i++))
-  do
-   if [ -f ${WDA_ENV} ] && [ -s ${WDA_ENV} ]; then
-     cat ${WDA_ENV}
-     break
-   else
-     echo "Waiting until WDA settings appear $i sec"
-     sleep 1
-   fi
-  done
-
-  if [ ! -f ${WDA_ENV} ]; then
-    echo "ERROR! Unable to get WDA settings from STF!"
+  ##Hit the WDA status URL to see if it is available
+  RETRY_DELAY=$(( $WDA_WAIT_TIMEOUT / 3 ))
+  if curl --retry 3 --retry-delay ${RETRY_DELAY} -Is "http://${WDA_HOST}:${WDA_PORT}/status" | head -1 | grep -q '200 OK'
+  then
+    echo "Linked appium container is up and running."
+  else
+    echo "ERROR! Unable to get WDA status successfully!"
     exit -1
   fi
 
-  #source wda.env file
-  source ${WDA_ENV}
-  . ${WDA_ENV}
-  export
-  # #91: remove WDA_ENV file before starting stf
-  # as we don't have enough permissions to remove we will reset its content completely
-  # commented reset as this file is used by appium healthcheck
-  # > ${WDA_ENV}
 
   #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
@@ -90,8 +74,7 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
     --connect-push ${STF_PROVIDER_CONNECT_PUSH} --connect-sub ${STF_PROVIDER_CONNECT_SUB} \
     --connect-app-dealer tcp://stf-triproxy-app:7160 --connect-dev-dealer tcp://stf-triproxy-dev:7260 \
     --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
-    --wda-host ${WDA_HOST} --wda-port ${WDA_PORT} \
-    --appium-port ${STF_PROVIDER_APPIUM_PORT}
+    --wda-host ${WDA_HOST} --wda-port ${WDA_PORT}
 
 fi
 

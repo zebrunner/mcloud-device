@@ -1,4 +1,4 @@
-FROM zebrunner/stf:2.3
+FROM zebrunner/stf:2.4
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -40,14 +40,11 @@ ENV STF_PROVIDER_VNC_PORT=5900
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # WebDriverAgent vars
+ENV WDA_HOST=appium
 ENV WDA_PORT=8100
 ENV MJPEG_PORT=8101
-ENV WDA_ENV=/opt/zebrunner/wda.env
-ENV WDA_LOG_FILE=/opt/zebrunner/wda.log
 ENV WDA_WAIT_TIMEOUT=30
 
-## Switch to the app user.
-#USER stf
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
