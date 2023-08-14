@@ -13,13 +13,10 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   ios list | grep $DEVICE_UDID
   if [ $? == 1 ]; then
-    ios list | grep ${DEVICE_UDID/-/}
-    if [ $? == 1 ]; then
-      echo "Device is not available!"
-      echo "Exiting without restarting..."
-      # exit with status 0 to stf device container restart
-      exit 0
-    fi
+    echo "Device is not available!"
+    echo "Exiting without restarting..."
+    # exit with status 0 to stf device container restart
+    exit 0
   fi
 fi
 
