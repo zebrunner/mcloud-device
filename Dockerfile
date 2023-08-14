@@ -45,6 +45,9 @@ ENV WDA_PORT=8100
 ENV MJPEG_PORT=8101
 ENV WDA_WAIT_TIMEOUT=30
 
+# Usbmuxd settings "host:port"
+ENV USBMUXD_SOCKET_ADDRESS=appium:22
+
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 

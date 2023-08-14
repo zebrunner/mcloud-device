@@ -7,7 +7,7 @@ PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   # start socat client and connect to appium usbmuxd socket
   rm -f /var/run/usbmuxd
-  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:appium:22 &
+  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
 
   sleep 5
 
