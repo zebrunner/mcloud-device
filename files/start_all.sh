@@ -67,7 +67,6 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   fi
 
 
-  #TODO: fix hardcoded values: --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
 
   node /app/lib/cli ios-device --serial ${DEVICE_UDID} \
@@ -84,7 +83,7 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
     --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/${DEVICE_UDID}/${STF_PROVIDER_MIN_PORT}/" \
     --boot-complete-timeout ${STF_PROVIDER_BOOT_COMPLETE_TIMEOUT} --mute-master ${STF_PROVIDER_MUTE_MASTER} \
     --connect-push ${STF_PROVIDER_CONNECT_PUSH} --connect-sub ${STF_PROVIDER_CONNECT_SUB} \
-    --connect-app-dealer tcp://stf-triproxy-app:7160 --connect-dev-dealer tcp://stf-triproxy-dev:7260 \
+    --connect-app-dealer ${STF_PROVIDER_CONNECT_APP_DEALER} --connect-dev-dealer ${STF_PROVIDER_CONNECT_DEV_DEALER} \
     --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
     --wda-host ${WDA_HOST} --wda-port ${WDA_PORT}
 
