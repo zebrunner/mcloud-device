@@ -18,6 +18,20 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     # exit with status 0 to stf device container restart
     exit 0
   fi
+
+
+  deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
+  echo "device info: " $deviceInfo
+
+  deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass")
+  export DEVICETYPE='Phone'
+  if [ "$deviceClass" = "iPad" ]; then
+    export DEVICETYPE='Tablet'
+  fi
+  if [ "$deviceClass" = "AppleTV" ]; then
+    export DEVICETYPE='tvOS'
+  fi
+
 fi
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
@@ -53,12 +67,12 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   fi
 
 
-  #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
+  #TODO: fix hardcoded values: --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
 
   node /app/lib/cli ios-device --serial ${DEVICE_UDID} \
     --device-name ${STF_PROVIDER_DEVICE_NAME} \
-    --device-type phone \
+    --device-type ${DEVICETYPE} \
     --host ${STF_PROVIDER_HOST} \
     --screen-port ${STF_PROVIDER_MIN_PORT} \
     --connect-port ${MJPEG_PORT} \
