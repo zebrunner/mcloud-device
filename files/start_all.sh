@@ -7,20 +7,31 @@ PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   # start socat client and connect to appium usbmuxd socket
   rm -f /var/run/usbmuxd
-  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:appium:22 &
+  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
 
   sleep 5
 
   ios list | grep $DEVICE_UDID
   if [ $? == 1 ]; then
-    ios list | grep ${DEVICE_UDID/-/}
-    if [ $? == 1 ]; then
-      echo "Device is not available!"
-      echo "Exiting without restarting..."
-      # exit with status 0 to stf device container restart
-      exit 0
-    fi
+    echo "Device is not available!"
+    echo "Exiting without restarting..."
+    # exit with status 0 to stf device container restart
+    exit 0
   fi
+
+
+  deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
+  echo "device info: " $deviceInfo
+
+  deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass")
+  export DEVICETYPE='Phone'
+  if [ "$deviceClass" = "iPad" ]; then
+    export DEVICETYPE='Tablet'
+  fi
+  if [ "$deviceClass" = "AppleTV" ]; then
+    export DEVICETYPE='tvOS'
+  fi
+
 fi
 
 # Note: STF_PROVIDER_... is not a good choice for env variable as STF tries to resolve and provide ... as cmd argument to its service!
@@ -56,12 +67,11 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   fi
 
 
-  #TODO: fix hardcoded values: --device-type, --connect-app-dealer, --connect-dev-dealer. Try to remove them at all if possible or find internally as stf provider do
 #    --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/" \
 
   node /app/lib/cli ios-device --serial ${DEVICE_UDID} \
     --device-name ${STF_PROVIDER_DEVICE_NAME} \
-    --device-type phone \
+    --device-type ${DEVICETYPE} \
     --host ${STF_PROVIDER_HOST} \
     --screen-port ${STF_PROVIDER_MIN_PORT} \
     --connect-port ${MJPEG_PORT} \
@@ -73,7 +83,7 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
     --screen-ws-url-pattern "${SOCKET_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/${DEVICE_UDID}/${STF_PROVIDER_MIN_PORT}/" \
     --boot-complete-timeout ${STF_PROVIDER_BOOT_COMPLETE_TIMEOUT} --mute-master ${STF_PROVIDER_MUTE_MASTER} \
     --connect-push ${STF_PROVIDER_CONNECT_PUSH} --connect-sub ${STF_PROVIDER_CONNECT_SUB} \
-    --connect-app-dealer tcp://stf-triproxy-app:7160 --connect-dev-dealer tcp://stf-triproxy-dev:7260 \
+    --connect-app-dealer ${STF_PROVIDER_CONNECT_APP_DEALER} --connect-dev-dealer ${STF_PROVIDER_CONNECT_DEV_DEALER} \
     --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>" \
     --wda-host ${WDA_HOST} --wda-port ${WDA_PORT}
 
