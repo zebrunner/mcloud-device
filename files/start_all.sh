@@ -11,6 +11,20 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   sleep 5
 
+  res=$(ios list 2>&1)
+  #echo "res: $res"
+  # {"err":"dial tcp 172.18.0.66:22: connect: connection refused","level":"fatal","msg":"failed getting device list","time":"2023-08-24T16:28:27Z"}
+  if [[ "${res}" == *"connection refused"* ]]; then
+    echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
+    exit 1
+  fi
+
+  if [[ "${res}" == *"no such host"* ]]; then
+    echo "ERROR! Appium is not ready yet!"
+    exit 1
+  fi
+
+  #TODO: init res output and analyze err and success messages instead of 1 or 0
   ios list | grep $DEVICE_UDID
   if [ $? == 1 ]; then
     echo "Device is not available!"
