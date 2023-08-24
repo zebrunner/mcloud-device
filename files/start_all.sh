@@ -19,9 +19,14 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     exit 0
   fi
 
-
   deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
   echo "device info: " $deviceInfo
+
+  #{"err":"could not retrieve PairRecord with error: ReadPair failed with errorcode '2', is the device paired?","level":"fatal","msg":"failed getting info","time":"2023-08-24T16:20:00Z"}
+  if [[ "${deviceInfo}" == *"could not retrieve PairRecord with error"* ]]; then
+    echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
+    exit 1
+  fi
 
   deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass")
   export DEVICETYPE='Phone'
