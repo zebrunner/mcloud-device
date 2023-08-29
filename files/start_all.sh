@@ -11,17 +11,35 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   sleep 5
 
-  ios list | grep $DEVICE_UDID
-  if [ $? == 1 ]; then
+  res=$(ios list 2>&1)
+  #echo "res: $res"
+  # {"err":"dial tcp 172.18.0.66:22: connect: connection refused","level":"fatal","msg":"failed getting device list","time":"2023-08-24T16:28:27Z"}
+  if [[ "${res}" == *"connection refused"* ]]; then
+    echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
+    exit 1
+  fi
+
+  if [[ "${res}" == *"no such host"* ]]; then
+    echo "ERROR! Appium is not ready yet!"
+    exit 1
+  fi
+
+  deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
+  echo "device info: " $deviceInfo
+
+  #{"err":"Device '111' not found. Is it attached to the machine?","level":"fatal","msg":"error getting devicelist","time":"2023-08-25T02:11:45-07:00"}
+  if [[ "${deviceInfo}" == *"not found. Is it attached to the machine"* ]]; then
     echo "Device is not available!"
     echo "Exiting without restarting..."
     # exit with status 0 to stf device container restart
     exit 0
   fi
 
-
-  deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
-  echo "device info: " $deviceInfo
+  #{"err":"could not retrieve PairRecord with error: ReadPair failed with errorcode '2', is the device paired?","level":"fatal","msg":"failed getting info","time":"2023-08-24T16:20:00Z"}
+  if [[ "${deviceInfo}" == *"could not retrieve PairRecord with error"* ]]; then
+    echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
+    exit 1
+  fi
 
   deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass")
   export DEVICETYPE='Phone'

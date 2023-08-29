@@ -1,4 +1,4 @@
-FROM public.ecr.aws/zebrunner/stf:2.5
+FROM public.ecr.aws/zebrunner/stf:2.5.2
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -17,12 +17,13 @@ ENV PUBLIC_IP_PROTOCOL=http
 ENV PLATFORM_NAME=android
 ENV STF_PROVIDER_DEVICE_NAME=
 
-ENV STF_PROVIDER_HOST=localhost
-ENV STF_PROVIDER_CONNECT_SUB=tcp://localhost:7250
-ENV STF_PROVIDER_CONNECT_PUSH=tcp://localhost:7270
+ENV STF_PROVIDER_HOST=
+ENV STF_PROVIDER_CONNECT_SUB=
+ENV STF_PROVIDER_CONNECT_PUSH=
 
-ENV STF_PROVIDER_CONNECT_APP_DEALER=tcp://stf-triproxy-app:7160
-ENV STF_PROVIDER_CONNECT_DEV_DEALER=tcp://stf-triproxy-dev:7260
+# make sure to keep commented to be able to start android stf-provider correctly
+#ENV STF_PROVIDER_CONNECT_APP_DEALER=
+#ENV STF_PROVIDER_CONNECT_DEV_DEALER=
 
 ENV STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000
 ENV STF_PROVIDER_CLEANUP=false
