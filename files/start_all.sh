@@ -1,5 +1,13 @@
 #!/bin/bash
 
+
+#154 don't start stf and uploader if related settings are empty
+
+if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || [[ -z $STF_PROVIDER_HOST ]]; then
+  echo "Existing without restart as one of important setting is missed!"
+  exit 0
+fi
+
 #converting to lower case just in case
 PLATFORM_NAME=${PLATFORM_NAME,,}
 PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
