@@ -24,6 +24,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     exit 1
   fi
 
+
   deviceInfo=$(ios info --udid=$DEVICE_UDID 2>&1)
   echo "device info: " $deviceInfo
 
@@ -32,6 +33,12 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     echo "Device is not available!"
     echo "Exiting without restarting..."
     # exit with status 0 to stf device container restart
+    exit 0
+  fi
+
+  # {"channel_id":"com.apple.instruments.server.services.deviceinfo","error":"Timed out waiting for response for message:5 channel:0","level":"error","msg":"failed requesting channel","time":"2023-09-05T15:19:27Z"}
+  if [[ "${deviceInfo}" == *"Timed out waiting for response for message"* ]]; then
+    echo "ERROR! Timed out waiting for response detected. Reboot is required!"
     exit 0
   fi
 
