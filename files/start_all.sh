@@ -5,6 +5,7 @@
 
 if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || [[ -z $STF_PROVIDER_HOST ]]; then
   echo "Existing without restart as one of important setting is missed!"
+  exit 0
 fi
 
 #converting to lower case just in case
