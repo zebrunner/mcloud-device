@@ -44,12 +44,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     exit 0
   fi
 
-  # {"channel_id":"com.apple.instruments.server.services.deviceinfo","error":"Timed out waiting for response for message:5 channel:0","level":"error","msg":"failed requesting channel","time":"2023-09-05T15:19:27Z"}
-  if [[ "${deviceInfo}" == *"Timed out waiting for response for message"* ]]; then
-    echo "ERROR! Timed out waiting for response detected. Reboot is required!"
-    exit 0
-  fi
-
   #{"err":"could not retrieve PairRecord with error: ReadPair failed with errorcode '2', is the device paired?","level":"fatal","msg":"failed getting info","time":"2023-08-24T16:20:00Z"}
   if [[ "${deviceInfo}" == *"could not retrieve PairRecord with error"* ]]; then
     echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
