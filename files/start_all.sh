@@ -50,7 +50,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     exit 1
   fi
 
-  deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass")
+  deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass | select( . != null )")
   export DEVICETYPE='Phone'
   if [ "$deviceClass" = "iPad" ]; then
     export DEVICETYPE='Tablet'
