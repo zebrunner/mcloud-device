@@ -2,17 +2,18 @@
 
 
 #154 don't start stf and uploader if related settings are empty
-
 if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || [[ -z $STF_PROVIDER_HOST ]]; then
   echo "Existing without restart as one of important setting is missed!"
   exit 0
 fi
 
+export DEVICETYPE='Phone'
+
 #converting to lower case just in case
 PLATFORM_NAME=${PLATFORM_NAME,,}
 PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 
-if [[ "$PLATFORM_NAME" == "ios" ]]; then
+if [[ "$PLATFORM_NAME" == "ios" ]] && [[ "$WDA_HOST" == "appium" ]]; then
   # start socat client and connect to appium usbmuxd socket
   rm -f /var/run/usbmuxd
   socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
@@ -51,7 +52,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   fi
 
   deviceClass=$(echo $deviceInfo | jq -r ".DeviceClass | select( . != null )")
-  export DEVICETYPE='Phone'
   if [ "$deviceClass" = "iPad" ]; then
     export DEVICETYPE='Tablet'
   fi
