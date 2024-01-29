@@ -18,11 +18,12 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   # Parse usbmuxd host and port
   IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
 
-  # start socat client and connect to appium usbmuxd socket
-  rm -f /var/run/usbmuxd
-  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
-
   while [ $(( startTime + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]; do
+    # start socat client and connect to appium usbmuxd socket
+    rm -f /var/run/usbmuxd
+    socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
+
+    # Check connection
     nc -z -v -w 5 "$USBMUXD_SOCKET_HOST" "$USBMUXD_SOCKET_PORT"
     if [ $? -eq 0 ]; then
       break
