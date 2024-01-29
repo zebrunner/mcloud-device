@@ -28,16 +28,18 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
       rm -f /var/run/usbmuxd
       socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
       if [[ -S /var/run/usbmuxd ]]; then
+        echo "Usbmuxd socket was created"
         socketCreated=1
         break
       fi
     else
-      echo "Can't establish connection to appium usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
+      echo "Can't establish connection to usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
       sleep "$USBMUXD_SOCKET_PERIOD"
     fi
   done
 
   if [[ $socketCreated -eq 0 ]]; then
+    echo "ERROR! usbmuxd socket not created"
     exit 1
   fi
 
@@ -45,7 +47,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   #echo "res: $res"
   # {"err":"dial tcp 172.18.0.66:22: connect: connection refused","level":"fatal","msg":"failed getting device list","time":"2023-08-24T16:28:27Z"}
   if [[ "${res}" == *"connection refused"* ]]; then
-    echo "ERROR! Can't establish connection to appium usbmuxd socket!"
+    echo "ERROR! Can't establish connection to usbmuxd socket!"
     exit 1
   fi
 
