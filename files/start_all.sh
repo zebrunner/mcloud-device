@@ -13,17 +13,41 @@ PLATFORM_NAME=${PLATFORM_NAME,,}
 PUBLIC_IP_PROTOCOL=${PUBLIC_IP_PROTOCOL,,}
 
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
-  # start socat client and connect to appium usbmuxd socket
-  rm -f /var/run/usbmuxd
-  socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
+  # Time variables
+  startTime=$(date +%s)
+  # Socket creation status
+  socketCreated=0
+  # Parse usbmuxd host and port
+  IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
 
-  sleep 5
+  while [[ $(( startTime + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
+    # Check connection
+    nc -z -v -w 5 "$USBMUXD_SOCKET_HOST" "$USBMUXD_SOCKET_PORT"
+    if [[ $? -eq 0 ]]; then
+      # start socat client and connect to appium usbmuxd socket
+      rm -f /var/run/usbmuxd
+      socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
+      if [[ -S /var/run/usbmuxd ]]; then
+        echo "Usbmuxd socket was created"
+        socketCreated=1
+        break
+      fi
+    else
+      echo "Can't establish connection to usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
+      sleep "$USBMUXD_SOCKET_PERIOD"
+    fi
+  done
+
+  if [[ $socketCreated -eq 0 ]]; then
+    echo "ERROR! usbmuxd socket not created"
+    exit 1
+  fi
 
   res=$(ios list 2>&1)
   #echo "res: $res"
   # {"err":"dial tcp 172.18.0.66:22: connect: connection refused","level":"fatal","msg":"failed getting device list","time":"2023-08-24T16:28:27Z"}
   if [[ "${res}" == *"connection refused"* ]]; then
-    echo "ERROR! Mounting is broken due to the invalid paring. Please re pair again!"
+    echo "ERROR! Can't establish connection to usbmuxd socket!"
     exit 1
   fi
 
