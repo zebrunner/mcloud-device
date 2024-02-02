@@ -34,8 +34,8 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
       fi
     else
       echo "Can't establish connection to usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
-      sleep "$USBMUXD_SOCKET_PERIOD"
     fi
+    sleep "$USBMUXD_SOCKET_PERIOD"
   done
 
   if [[ $socketCreated -eq 0 ]]; then
