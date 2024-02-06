@@ -61,4 +61,8 @@ COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
 CMD bash /opt/start_all.sh
 
+RUN apt-get -y update && \
+    apt-get -y install netcat && \
+    rm -rf /var/lib/apt/lists/*
+
 HEALTHCHECK CMD ["healthcheck"]
