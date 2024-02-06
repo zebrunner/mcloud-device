@@ -109,8 +109,13 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
 
   ##Hit the WDA status URL to see if it is available
   RETRY_DELAY=$(( $WDA_WAIT_TIMEOUT / 3 ))
-  if curl --retry 3 --retry-delay ${RETRY_DELAY} -Is "http://${WDA_HOST}:${WDA_PORT}/status" | head -1 | grep -q '200 OK'
-  then
+  timeout "$WDA_WAIT_TIMEOUT" bash -c "
+   until curl -sf \"http://${WDA_HOST}:${WDA_PORT}/status\";
+   do
+     echo \"http://${WDA_HOST}:${WDA_PORT}/status endpoint not available, one more attempt\";
+     sleep ${RETRY_DELAY};
+   done"
+  if [[ $? -eq 0 ]]; then
     echo "Linked appium container is up and running."
   else
     echo "ERROR! Unable to get WDA status successfully!"
