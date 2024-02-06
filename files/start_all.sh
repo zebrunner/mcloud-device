@@ -27,8 +27,8 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
       # start socat client and connect to appium usbmuxd socket
       rm -f /var/run/usbmuxd
       socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
-      if [[ -S /var/run/usbmuxd ]]; then
-        echo "Usbmuxd socket was created"
+      timeout 10 bash -c 'until [[ -S /var/run/usbmuxd ]]; do sleep 1; else echo "Usbmuxd socket was created"; done'
+      if [[ $? -eq 0 ]]; then
         socketCreated=1
         break
       fi
