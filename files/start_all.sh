@@ -114,7 +114,7 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
     echo "Linked appium container is up and running."
   else
     echo "ERROR! Unable to get WDA status successfully!"
-    exit -1
+    exit 1
   fi
 
 
