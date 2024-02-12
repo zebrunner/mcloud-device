@@ -1,11 +1,49 @@
 #!/bin/bash
 
 
+check_tcp_connection() {
+  # -z          - Zero-I/O mode [used for scanning]
+  # -v          - Verbose
+  # -w timeout  - Timeout for connects and final net reads
+  nc -z -v -w 10 $1
+}
+
+parse_url_for_nc() {
+  # tcp://demo.zebrunner.farm:7250 -> demo.zebrunner.farm 7250
+  echo "$1" | sed -nE 's/^([a-z]*:\/\/)*([a-z\.]+):([0-9]*)/\2 \3/pI'
+}
+
+check_stf_provider_ports() {
+  push_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_PUSH)
+  sub_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_SUB)
+  rethink_port=$(parse_url_for_nc $RETHINKDB_PORT_28015_TCP)
+
+  check_tcp_connection "$push_port"
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR! STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is not accessible! Stopping container."
+    exit 0
+  fi
+
+  check_tcp_connection "$sub_port"
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR! STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is not accessible! Stopping container."
+    exit 0
+  fi
+
+  check_tcp_connection "$rethink_port"
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR! RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is not accessible! Stopping container."
+    exit 0
+  fi
+}
+
 #154 don't start stf and uploader if related settings are empty
 
 if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || [[ -z $STF_PROVIDER_HOST ]]; then
-  echo "Existing without restart as one of important setting is missed!"
+  echo "Exiting without restart as one of important setting is missed!"
   exit 0
+else
+    check_stf_provider_ports
 fi
 
 #converting to lower case just in case
@@ -22,7 +60,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   while [[ $(( startTime + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
     # Check connection
-    nc -z -v -w 5 "$USBMUXD_SOCKET_HOST" "$USBMUXD_SOCKET_PORT"
+    check_tcp_connection "$USBMUXD_SOCKET_HOST $USBMUXD_SOCKET_PORT"
     if [[ $? -eq 0 ]]; then
       # start socat client and connect to appium usbmuxd socket
       rm -f /var/run/usbmuxd
@@ -148,7 +186,7 @@ fi
 exit_status=$?
 echo "Exit status: $exit_status"
 
-#TODO: #85 define exit strategy from container on exiit
+#TODO: #85 define exit strategy from container on exit
 # do always restart until appium container state is not Exited!
 # for android stop of the appium container crash stf asap so verification of the appium container required only for iOS
 exit $exit_status
