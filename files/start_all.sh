@@ -186,6 +186,13 @@ fi
 exit_status=$?
 echo "Exit status: $exit_status"
 
+# #184 https://github.com/zebrunner/mcloud-device/issues/184
+if [ "${PLATFORM_NAME}" == "ios" ]; then
+  echo "WDA connection status:"
+  curl --verbose "http://${WDA_HOST}:${WDA_PORT}/status"
+fi
+
+
 #TODO: #85 define exit strategy from container on exit
 # do always restart until appium container state is not Exited!
 # for android stop of the appium container crash stf asap so verification of the appium container required only for iOS
