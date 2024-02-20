@@ -52,7 +52,6 @@ SOCKET_PROTOCOL=ws
 if [ "${PUBLIC_IP_PROTOCOL}" == "https" ]; then
   SOCKET_PROTOCOL=wss
 fi
-####/ Preparation steps
 
 #### Check STF_PROVIDER vars
 if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || [[ -z $STF_PROVIDER_HOST ]]; then
@@ -61,7 +60,6 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
 else
     check_stf_provider_ports
 fi
-####/ Check STF_PROVIDER vars
 
 #### Prepare for iOS
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
@@ -93,7 +91,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
     echo "ERROR! usbmuxd socket not created"
     exit 1
   fi
-  ####/ Connect usbmuxd
 
   #### Check {WDA}/status endpoint
   RETRY_DELAY=$(( $WDA_WAIT_TIMEOUT / 3 ))
@@ -112,7 +109,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   echo "WDA status:"
   curl http://${WDA_HOST}:${WDA_PORT}/status
-  ####/ Check {WDA}/status endpoint
 
   #### Detect device type
   wdaDeviceInfo=$(curl -sf http://${WDA_HOST}:${WDA_PORT}/wda/device/info)
@@ -137,9 +133,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   esac
 
   echo "DEVICETYPE: $DEVICETYPE"
-  ####/ Detect device type
 fi
-####/ Prepare for iOS
 
 #### Connect to STF
 if [ "${PLATFORM_NAME}" == "android" ]; then
@@ -176,7 +170,6 @@ fi
 
 exit_status=$?
 echo "Exit status: $exit_status"
-####/ Connect to STF
 
 # #184 https://github.com/zebrunner/mcloud-device/issues/184
 if [ "${PLATFORM_NAME}" == "ios" ]; then
