@@ -54,9 +54,14 @@ ENV USBMUXD_SOCKET_ADDRESS=appium:22
 ENV USBMUXD_SOCKET_TIMEOUT=60
 ENV USBMUXD_SOCKET_PERIOD=5
 
+# Additional vars
+ENV DEBUG=false
+ENV VERBOSE=false
+
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
+COPY files/debug.sh /opt/
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
 CMD bash /opt/start_all.sh

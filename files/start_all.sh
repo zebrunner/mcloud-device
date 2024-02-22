@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Debug mode activator
+# You can use args and env vars for execution control
+# -d - turn on debug mode  [  $DEBUG=true  ]
+# -v - verbose output      [ $VERBOSE=true ]
+. /opt/debug.sh
 
 check_tcp_connection() {
   # -z          - Zero-I/O mode [used for scanning]
@@ -43,7 +48,7 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
   echo "Exiting without restart as one of important setting is missed!"
   exit 0
 else
-    check_stf_provider_ports
+  check_stf_provider_ports
 fi
 
 #converting to lower case just in case
