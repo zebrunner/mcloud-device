@@ -54,8 +54,9 @@ ENV USBMUXD_SOCKET_ADDRESS=appium:22
 ENV USBMUXD_SOCKET_TIMEOUT=60
 ENV USBMUXD_SOCKET_PERIOD=5
 
-# Additional vars
+# Debug mode vars
 ENV DEBUG=false
+ENV DEBUG_TIMEOUT=3600
 ENV VERBOSE=false
 
 # Need root user to clear existing /var/run/usbmuxd socket if any

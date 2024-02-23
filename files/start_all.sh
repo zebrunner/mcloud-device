@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# Debug mode activator
-# You can use args and env vars for execution control
-# -d - turn on debug mode  [  $DEBUG=true  ]
-# -v - verbose output      [ $VERBOSE=true ]
+
 . /opt/debug.sh
 
 check_tcp_connection() {
