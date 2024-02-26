@@ -111,30 +111,6 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
 
   echo "WDA status:"
   curl http://${WDA_HOST}:${WDA_PORT}/status
-
-  #### Detect device type
-  wdaDeviceInfo=$(curl -sf http://${WDA_HOST}:${WDA_PORT}/wda/device/info)
-  device=$(echo "$wdaDeviceInfo" | jq -r ".value.model")
-
-  echo "WDA device info:"
-  echo $wdaDeviceInfo
-
-  case $device in
-    "iPhone")
-      export DEVICETYPE='Phone'
-    ;;
-    "iPad")
-      export DEVICETYPE='Tablet'
-    ;;
-    "AppleTV")
-      export DEVICETYPE='tvOS'
-    ;;
-    *)
-      echo "Device type: '$device' is not known. Setting DEVICETYPE to 'Phone'"
-      export DEVICETYPE='Phone'
-  esac
-
-  echo "DEVICETYPE: $DEVICETYPE"
 fi
 
 #### Connect to STF
@@ -148,7 +124,6 @@ elif [ "${PLATFORM_NAME}" == "ios" ]; then
   node /app/lib/cli ios-device \
     --serial ${DEVICE_UDID} \
     --device-name ${STF_PROVIDER_DEVICE_NAME} \
-    --device-type ${DEVICETYPE} \
     --host ${STF_PROVIDER_HOST} \
     --screen-port ${STF_PROVIDER_MIN_PORT} \
     --connect-port ${MJPEG_PORT} \
