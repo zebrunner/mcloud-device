@@ -9,7 +9,7 @@
 # VERBOSE=[true/false]     - verbose mode       (default: false)
 
 # Set default value
-${DEBUG_TIMEOUT:=3600}
+: ${DEBUG_TIMEOUT:=3600}
 
 if [[ "${DEBUG}" == "true" ]]; then
   echo "#######################################################"
