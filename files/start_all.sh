@@ -12,7 +12,15 @@ check_tcp_connection() {
 
 parse_url_for_nc() {
   # tcp://demo.zebrunner.farm:7250 -> demo.zebrunner.farm 7250
-  echo "$1" | sed -nE 's/^([a-z]*:\/\/)*([a-z\.]+):([0-9]*)/\2 \3/pI'
+  # tcp://192.168.88.88:7250 -> 192.168.88.88 7250
+
+  #192 tcp connection verification doesn't support usage of ip addresses 
+  host=`echo $1 | cut -d ':' -f 2`
+  # remove forward slashes
+  host="${host//\//}"
+
+  port=`echo $1 | cut -d ':' -f 3`
+  echo $host $port
 }
 
 check_stf_provider_ports() {
