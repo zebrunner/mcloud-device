@@ -1,4 +1,4 @@
-FROM public.ecr.aws/zebrunner/stf:2.6.3
+FROM public.ecr.aws/zebrunner/stf:2.6.4
 
 # https://github.com/zebrunner/android-device/issues/70
 #    gray screen on android after 48 hours without restart
@@ -54,9 +54,15 @@ ENV USBMUXD_SOCKET_ADDRESS=appium:22
 ENV USBMUXD_SOCKET_TIMEOUT=60
 ENV USBMUXD_SOCKET_PERIOD=5
 
+# Debug mode vars
+ENV DEBUG=false
+ENV DEBUG_TIMEOUT=3600
+ENV VERBOSE=false
+
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
+COPY files/debug.sh /opt/
 COPY files/healthcheck /usr/local/bin/
 COPY files/start_all.sh /opt/
 CMD bash /opt/start_all.sh
