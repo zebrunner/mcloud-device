@@ -23,28 +23,54 @@ parse_url_for_nc() {
   echo $host $port
 }
 
-check_stf_provider_ports() {
+wait_stf_provider_ports() {
   push_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_PUSH)
   sub_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_SUB)
   rethink_port=$(parse_url_for_nc $RETHINKDB_PORT_28015_TCP)
 
-  check_tcp_connection "$push_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is not accessible! Stopping container."
-    exit 0
-  fi
+  wait_port_start_time=$(date +%s)
+  echo
 
-  check_tcp_connection "$sub_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is not accessible! Stopping container."
-    exit 0
-  fi
+  while [[ $(( wait_port_start_time + STF_PROVIDER_PORTS_WAIT )) -gt "$(date +%s)" ]]; do
 
-  check_tcp_connection "$rethink_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is not accessible! Stopping container."
-    exit 0
-  fi
+    if [[ -z $push_state ]] || [[ $push_state -ne 0 ]]; then
+      check_tcp_connection "$push_port"
+      push_state=$?
+      if [[ $push_state -eq 0 ]]; then
+        echo -e "STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is accessible! \n"
+      else
+        echo -e "ERROR! STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is not accessible! \n"
+      fi
+    fi
+
+    if [[ -z $sub_state ]] || [[ $sub_state -ne 0 ]]; then
+      check_tcp_connection "$sub_port"
+      sub_state=$?
+      if [[ $sub_state -eq 0 ]]; then
+        echo -e "STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is accessible! \n"
+      else
+        echo -e "ERROR! STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is not accessible! \n"
+      fi
+    fi
+
+    if [[ -z $rethink_state ]] || [[ $rethink_state -ne 0 ]]; then
+      check_tcp_connection "$rethink_port"
+      rethink_state=$?
+      if [[ $rethink_state -eq 0 ]]; then
+        echo -e "RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is accessible! \n"
+      else
+        echo -e "ERROR! RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is not accessible! \n"
+      fi
+    fi
+
+    if [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]]; then
+      echo "All STF provider ports are available!"
+      echo "-------------------------------------"
+      break
+    fi
+
+    sleep $STF_PROVIDER_PORTS_WAIT_PERIOD
+  done
 }
 
 #### Preparation steps
@@ -68,7 +94,7 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
   echo "Exiting without restart as one of important setting is missed!"
   exit 0
 else
-  check_stf_provider_ports
+  wait_stf_provider_ports
 fi
 
 #### Prepare for iOS
