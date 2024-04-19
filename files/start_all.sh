@@ -100,12 +100,12 @@ fi
 #### Prepare for iOS
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   #### Connect usbmuxd
-  startTime=$(date +%s)
+  wait_usbmuxd_start_time=$(date +%s)
   socketCreated=0
   # Parse usbmuxd host and port ( 'appium:22' -> 'appium 22' )
   IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
 
-  while [[ $(( startTime + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
+  while [[ $(( wait_usbmuxd_start_time + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
     # Check connection
     check_tcp_connection "$USBMUXD_SOCKET_HOST $USBMUXD_SOCKET_PORT"
     if [[ $? -eq 0 ]]; then
