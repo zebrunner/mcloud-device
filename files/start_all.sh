@@ -23,7 +23,7 @@ parse_url_for_nc() {
   echo $host $port
 }
 
-wait_stf_provider_ports() {
+check_stf_provider_ports() {
   push_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_PUSH)
   sub_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_SUB)
   rethink_port=$(parse_url_for_nc $RETHINKDB_PORT_28015_TCP)
@@ -95,7 +95,7 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
   echo "Exiting without restart as one of important setting is missed!"
   exit 0
 else
-  if ! wait_stf_provider_ports; then
+  if ! check_stf_provider_ports; then
     echo "Stopping container."
     exit 0
   fi
