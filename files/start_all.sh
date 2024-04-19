@@ -31,7 +31,7 @@ wait_stf_provider_ports() {
   wait_port_start_time=$(date +%s)
   echo
 
-  while [[ $(( wait_port_start_time + STF_PROVIDER_PORTS_WAIT )) -gt "$(date +%s)" ]]; do
+  while [[ $(( wait_port_start_time + STF_SERVICES_WAIT_TIMEOUT )) -gt "$(date +%s)" ]]; do
 
     if [[ -z $push_state ]] || [[ $push_state -ne 0 ]]; then
       check_tcp_connection "$push_port"
@@ -64,13 +64,14 @@ wait_stf_provider_ports() {
     fi
 
     if [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]]; then
-      echo "All STF provider ports are available!"
-      echo "-------------------------------------"
-      break
+      echo -e "All prerequisites ports for STF provider are accessible. \n"
+      return 0
     fi
 
-    sleep $STF_PROVIDER_PORTS_WAIT_PERIOD
+    sleep $STF_SERVICES_WAIT_RETRY
   done
+  echo -e "One or more of the required STF provider ports are not accessible. \n"
+  return 1
 }
 
 #### Preparation steps
@@ -94,7 +95,10 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
   echo "Exiting without restart as one of important setting is missed!"
   exit 0
 else
-  wait_stf_provider_ports
+  if ! wait_stf_provider_ports; then
+    echo "Stopping container."
+    exit 0
+  fi
 fi
 
 #### Prepare for iOS
