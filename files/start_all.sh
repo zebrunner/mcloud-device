@@ -123,8 +123,8 @@ fi
 
 
 #### Start broadcasting from ws to tcp
-. /opt/broadcast.sh &
-
+websocat tcp-l:0.0.0.0:${BROADCAST_PORT} broadcast:autoreconnect:ws://localhost:${STF_PROVIDER_MIN_PORT} --binary --autoreconnect-delay-millis 2000 &
+echo "Broadcasting from ws screen port ${STF_PROVIDER_MIN_PORT} to tcp ${BROADCAST_PORT} port."
 
 #### Connect to STF
 if [ "${PLATFORM_NAME}" == "android" ]; then

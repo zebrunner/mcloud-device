@@ -39,8 +39,7 @@ ENV STF_PROVIDER_SCREEN_PING_INTERVAL=30000
 ENV STF_PROVIDER_SCREEN_RESET=false
 ENV STF_PROVIDER_VNC_INITIAL_SIZE=600x800
 ENV STF_PROVIDER_VNC_PORT=5900
-ENV BROADCASTING_PORT=2223
-ENV BROADCASTING_RETRY_PERIOD=5
+ENV BROADCAST_PORT=2223
 
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
@@ -75,7 +74,6 @@ RUN wget -qO /usr/local/bin/websocat https://github.com/vi/websocat/releases/dow
 
 COPY files/debug.sh /opt/
 COPY files/start_all.sh /opt/
-COPY files/broadcast.sh /opt/
 COPY files/healthcheck /usr/local/bin/
 
 CMD bash /opt/start_all.sh
