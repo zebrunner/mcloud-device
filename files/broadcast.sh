@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. /opt/debug.sh
 
 #### Broadcasting from ws to tcp port
 while :; do
