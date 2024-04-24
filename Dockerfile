@@ -39,6 +39,8 @@ ENV STF_PROVIDER_SCREEN_PING_INTERVAL=30000
 ENV STF_PROVIDER_SCREEN_RESET=false
 ENV STF_PROVIDER_VNC_INITIAL_SIZE=600x800
 ENV STF_PROVIDER_VNC_PORT=5900
+ENV BROADCASTING_PORT=2223
+ENV BROADCASTING_RETRY_PERIOD=5
 
 # #56 disable ssl verification by stf provider slave (fix screenshots generation over ssl)
 ENV NODE_TLS_REJECT_UNAUTHORIZED=0
@@ -62,13 +64,20 @@ ENV VERBOSE=false
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
-COPY files/debug.sh /opt/
-COPY files/healthcheck /usr/local/bin/
-COPY files/start_all.sh /opt/
-CMD bash /opt/start_all.sh
-
 RUN apt-get -y update && \
     apt-get -y install netcat && \
     rm -rf /var/lib/apt/lists/*
+
+RUN wget -qO /usr/local/bin/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
+    chmod a+x /usr/local/bin/websocat && \
+    websocat --version && \
+    rm -rf websocat_max.x86_64-unknown-linux-musl
+
+COPY files/debug.sh /opt/
+COPY files/start_all.sh /opt/
+COPY files/broadcast.sh /opt/
+COPY files/healthcheck /usr/local/bin/
+
+CMD bash /opt/start_all.sh
 
 HEALTHCHECK CMD ["healthcheck"]

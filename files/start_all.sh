@@ -121,6 +121,11 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   curl http://${WDA_HOST}:${WDA_PORT}/status
 fi
 
+
+#### Start broadcasting from ws to tcp
+. /opt/broadcast.sh &
+
+
 #### Connect to STF
 if [ "${PLATFORM_NAME}" == "android" ]; then
   stf provider \
