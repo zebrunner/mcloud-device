@@ -121,6 +121,11 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   curl http://${WDA_HOST}:${WDA_PORT}/status
 fi
 
+
+#### Start broadcasting from ws to tcp
+websocat tcp-l:0.0.0.0:${BROADCAST_PORT} broadcast:autoreconnect:ws://127.0.0.1:${STF_PROVIDER_MIN_PORT} --binary --autoreconnect-delay-millis 2000 &
+echo "Broadcasting from ws screen port ${STF_PROVIDER_MIN_PORT} to tcp ${BROADCAST_PORT} port."
+
 #### Connect to STF
 if [ "${PLATFORM_NAME}" == "android" ]; then
   stf provider \
