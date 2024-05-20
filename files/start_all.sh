@@ -28,23 +28,50 @@ check_stf_provider_ports() {
   sub_port=$(parse_url_for_nc $STF_PROVIDER_CONNECT_SUB)
   rethink_port=$(parse_url_for_nc $RETHINKDB_PORT_28015_TCP)
 
-  check_tcp_connection "$push_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is not accessible! Stopping container."
-    exit 0
-  fi
+  wait_port_start_time=$(date +%s)
+  echo
 
-  check_tcp_connection "$sub_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is not accessible! Stopping container."
-    exit 0
-  fi
+  while [[ $(( wait_port_start_time + STF_SERVICES_WAIT_TIMEOUT )) -gt "$(date +%s)" ]]; do
 
-  check_tcp_connection "$rethink_port"
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR! RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is not accessible! Stopping container."
-    exit 0
-  fi
+    if [[ -z $push_state ]] || [[ $push_state -ne 0 ]]; then
+      check_tcp_connection "$push_port"
+      push_state=$?
+      if [[ $push_state -eq 0 ]]; then
+        echo -e "STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is accessible! \n"
+      else
+        echo -e "ERROR! STF_PROVIDER_CONNECT_PUSH [$STF_PROVIDER_CONNECT_PUSH] is not accessible! \n"
+      fi
+    fi
+
+    if [[ -z $sub_state ]] || [[ $sub_state -ne 0 ]]; then
+      check_tcp_connection "$sub_port"
+      sub_state=$?
+      if [[ $sub_state -eq 0 ]]; then
+        echo -e "STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is accessible! \n"
+      else
+        echo -e "ERROR! STF_PROVIDER_CONNECT_SUB [$STF_PROVIDER_CONNECT_SUB] is not accessible! \n"
+      fi
+    fi
+
+    if [[ -z $rethink_state ]] || [[ $rethink_state -ne 0 ]]; then
+      check_tcp_connection "$rethink_port"
+      rethink_state=$?
+      if [[ $rethink_state -eq 0 ]]; then
+        echo -e "RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is accessible! \n"
+      else
+        echo -e "ERROR! RETHINKDB_PORT_28015_TCP [$RETHINKDB_PORT_28015_TCP] is not accessible! \n"
+      fi
+    fi
+
+    if [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]] && [[ $push_state -eq 0 ]]; then
+      echo -e "All prerequisites ports for STF provider are accessible. \n"
+      return 0
+    fi
+
+    sleep $STF_SERVICES_WAIT_RETRY
+  done
+  echo -e "One or more of the required STF provider ports are not accessible. \n"
+  return 1
 }
 
 #### Preparation steps
@@ -68,18 +95,21 @@ if [[ -z $STF_PROVIDER_CONNECT_PUSH ]] || [[ -z $STF_PROVIDER_CONNECT_SUB ]] || 
   echo "Exiting without restart as one of important setting is missed!"
   exit 0
 else
-  check_stf_provider_ports
+  if ! check_stf_provider_ports; then
+    echo "Stopping container."
+    exit 0
+  fi
 fi
 
 #### Prepare for iOS
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   #### Connect usbmuxd
-  startTime=$(date +%s)
+  wait_usbmuxd_start_time=$(date +%s)
   socketCreated=0
   # Parse usbmuxd host and port ( 'appium:22' -> 'appium 22' )
   IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
 
-  while [[ $(( startTime + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
+  while [[ $(( wait_usbmuxd_start_time + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
     # Check connection
     check_tcp_connection "$USBMUXD_SOCKET_HOST $USBMUXD_SOCKET_PORT"
     if [[ $? -eq 0 ]]; then
