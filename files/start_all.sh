@@ -166,7 +166,7 @@ if [ "${PLATFORM_NAME}" == "android" ]; then
 elif [ "${PLATFORM_NAME}" == "ios" ]; then
   node /app/lib/cli ios-device \
     --serial ${DEVICE_UDID} \
-    --device-name ${STF_PROVIDER_DEVICE_NAME} \
+    --device-name "${STF_PROVIDER_DEVICE_NAME}" \
     --host ${STF_PROVIDER_HOST} \
     --screen-port ${STF_PROVIDER_MIN_PORT} \
     --connect-port ${MJPEG_PORT} \
