@@ -153,7 +153,17 @@ fi
 
 
 #### Start broadcasting from ws to tcp
-websocat tcp-l:0.0.0.0:${BROADCAST_PORT} broadcast:ws://127.0.0.1:${STF_PROVIDER_MIN_PORT} --binary &
+# broadcast: keeps one persistent inner ws so the screen feed stays alive across recording clients.
+start_screen_broadcast() {
+  while true; do
+    websocat --binary \
+      tcp-l:0.0.0.0:${BROADCAST_PORT} \
+      broadcast:ws://127.0.0.1:${STF_PROVIDER_MIN_PORT}
+    echo "Screen broadcast websocat exited ($?); restarting in 1s."
+    sleep 1
+  done
+}
+start_screen_broadcast &
 echo "Broadcasting from ws screen port ${STF_PROVIDER_MIN_PORT} to tcp ${BROADCAST_PORT} port."
 
 #### Connect to STF
