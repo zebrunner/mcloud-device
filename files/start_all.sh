@@ -104,32 +104,47 @@ fi
 #### Prepare for iOS
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   #### Connect usbmuxd
-  wait_usbmuxd_start_time=$(date +%s)
-  socketCreated=0
-  # Parse usbmuxd host and port ( 'appium:22' -> 'appium 22' )
-  IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
+  #
+  # WIRELESS=true marks a device with no usb path -- an Apple TV 4K, for example,
+  # which has no diagnostic port and is reached over a network tunnel owned by the
+  # host. There is no usbmuxd socket to share for such a device, so this whole block
+  # is skipped. Without the skip the loop below burns USBMUXD_SOCKET_TIMEOUT and then
+  # exits 1, and the container never reaches the WDA check that would have succeeded.
+  #
+  # Nothing after this block needs usbmuxd: the WDA health check is plain HTTP
+  # against WDA_HOST/WDA_PORT, and STF registration uses --serial ${DEVICE_UDID}
+  # from the environment. Set by zebrunner/mcloud-agent for rows with wireless=true.
+  if [[ "${WIRELESS:-false}" == "true" ]]; then
+    echo "WIRELESS=true: skipping usbmuxd setup, this device has no usb path."
+    echo "WebDriverAgent is expected at http://${WDA_HOST}:${WDA_PORT} (published by the host)."
+  else
+    wait_usbmuxd_start_time=$(date +%s)
+    socketCreated=0
+    # Parse usbmuxd host and port ( 'appium:22' -> 'appium 22' )
+    IFS=: read -r USBMUXD_SOCKET_HOST USBMUXD_SOCKET_PORT <<< "$USBMUXD_SOCKET_ADDRESS"
 
-  while [[ $(( wait_usbmuxd_start_time + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
-    # Check connection
-    check_tcp_connection "$USBMUXD_SOCKET_HOST $USBMUXD_SOCKET_PORT"
-    if [[ $? -eq 0 ]]; then
-      # start socat client and connect to appium usbmuxd socket
-      rm -f /var/run/usbmuxd
-      socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
-      timeout 10 bash -c 'until [[ -S /var/run/usbmuxd ]]; do sleep 1; echo "/var/run/usbmuxd socket existence check"; done'
+    while [[ $(( wait_usbmuxd_start_time + $USBMUXD_SOCKET_TIMEOUT )) -gt "$(date +%s)" ]]; do
+      # Check connection
+      check_tcp_connection "$USBMUXD_SOCKET_HOST $USBMUXD_SOCKET_PORT"
       if [[ $? -eq 0 ]]; then
-        socketCreated=1
-        break
+        # start socat client and connect to appium usbmuxd socket
+        rm -f /var/run/usbmuxd
+        socat UNIX-LISTEN:/var/run/usbmuxd,fork,reuseaddr,mode=777 TCP:${USBMUXD_SOCKET_ADDRESS} &
+        timeout 10 bash -c 'until [[ -S /var/run/usbmuxd ]]; do sleep 1; echo "/var/run/usbmuxd socket existence check"; done'
+        if [[ $? -eq 0 ]]; then
+          socketCreated=1
+          break
+        fi
+      else
+        echo "Can't establish connection to usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
       fi
-    else
-      echo "Can't establish connection to usbmuxd socket [$USBMUXD_SOCKET_ADDRESS], one more attempt in $USBMUXD_SOCKET_PERIOD seconds."
-    fi
-    sleep "$USBMUXD_SOCKET_PERIOD"
-  done
+      sleep "$USBMUXD_SOCKET_PERIOD"
+    done
 
-  if [[ $socketCreated -eq 0 ]]; then
-    echo "ERROR! usbmuxd socket not created"
-    exit 1
+    if [[ $socketCreated -eq 0 ]]; then
+      echo "ERROR! usbmuxd socket not created"
+      exit 1
+    fi
   fi
 
   #### Check {WDA}/status endpoint
