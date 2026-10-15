@@ -1,0 +1,9 @@
+---
+version: 2
+# no docker: a new STF base image needs a check of the options of its provider and ios-device commands (entrypoint.sh)
+updates:
+  # actions/* and the other actions of .github/workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

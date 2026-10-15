@@ -1,0 +1,8 @@
+---
+# the rules ignored for the whole Dockerfile, each one with its reason (CONVENTIONS.md);
+# a rule of a single instruction is ignored with a `# hadolint ignore=<rule>` comment above it
+ignored:
+  # STF_STORAGE_TOKEN is declared empty as documentation of the supported env vars; the real value is passed at runtime
+  - DL3064
+  # stf (uid 998) is the user of the base image; the image runs on Docker (mcloud-agent), not Kubernetes runAsNonRoot
+  - DL3066

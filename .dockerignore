@@ -1,0 +1,9 @@
+# only util/ and entrypoint.sh are needed by the image build
+.git
+.github
+.idea
+.venv
+tests
+*.md
+.DS_Store
+**/.DS_Store
