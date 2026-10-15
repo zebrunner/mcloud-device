@@ -1,9 +1,11 @@
 # check=skip=SecretsUsedInArgOrEnv
 # STF_STORAGE_TOKEN is declared empty as documentation of the supported env vars; the real value is passed at runtime
 
-# go-ios of mcloud-ios-connector, built from its sources without cgo: the release binaries need glibc 2.34, the base
-# image (Ubuntu 20.04) has 2.31. The build runs on the platform of the builder, the binary is linux/amd64
-FROM --platform=${BUILDPLATFORM} golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS go-ios
+# The tools of the image do not depend on the STF base image, which drops them (zebrunner/stf#1052).
+# go-ios of mcloud-ios-connector is built from its sources without cgo: a static binary, the release binaries need
+# glibc 2.34 and the stf:2.7 base image (Ubuntu 20.04) has 2.31. websocat is the static musl build.
+# The stage runs on the platform of the builder, the binaries are linux/amd64
+FROM --platform=${BUILDPLATFORM} golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS tools
 
 WORKDIR /go-ios
 RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive/refs/tags/v1.3.2.tar.gz && \
@@ -14,11 +16,15 @@ RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive
     # the version of the release build, `ios --version` prints it
     sed -i 's/^const version = "local-build"$/const version = "1.3.2"/' main.go && \
     grep -q '^const version = "1.3.2"$' main.go && \
-    env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local go build -trimpath -ldflags="-s -w" -o /out/ios
+    env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local go build -trimpath -ldflags="-s -w" -o /out/ios && \
+    wget -q -O /out/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
+    echo "c3a63a2a77d1abf5baef5bbf7474690ac2896e2dabd60498e56361a2fd131d8f  /out/websocat" > /tmp/websocat.sha256 && \
+    sha256sum -c /tmp/websocat.sha256 && \
+    chmod 755 /out/websocat
 
 FROM public.ecr.aws/zebrunner/stf:2.7@sha256:4b1fed9604c11318c622eda624bf50037fa02f8ac73a98ee92f03e5479622a68
 
-# The base image is linux/amd64 only (its STF build), so are go-ios and websocat below: another platform would build
+# The base image is linux/amd64 only (its STF build), so are go-ios and websocat: another platform would build
 # an image with amd64 binaries, so the build stops
 ARG TARGETARCH
 RUN if [ -n "${TARGETARCH}" ] && [ "${TARGETARCH}" != "amd64" ]; then \
@@ -28,23 +34,23 @@ RUN if [ -n "${TARGETARCH}" ] && [ "${TARGETARCH}" != "amd64" ]; then \
 
 USER root
 
-# go-ios: the iOS commands of STF (install, launch, reboot), it replaces the one of the base image
-COPY --from=go-ios /out/ios /usr/local/bin/ios
-
-# websocat: the screen broadcast of BROADCAST_PORT.
+# socat: the reachability checks and the usbmuxd forwarding, curl: WebDriverAgent, procps: pgrep of the healthcheck.
 # The usbmuxd socket forwarded by entrypoint.sh is in a dir of stf (/var/run is root only), the restart counter of the
 # unreachable STF services is in /tmp/zebrunner
-RUN ios --version && \
-    wget -q -O /tmp/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
-    echo "c3a63a2a77d1abf5baef5bbf7474690ac2896e2dabd60498e56361a2fd131d8f  /tmp/websocat" > /tmp/websocat.sha256 && \
-    sha256sum -c /tmp/websocat.sha256 && \
-    install -m 755 /tmp/websocat /usr/local/bin/websocat && \
-    rm -f /tmp/websocat /tmp/websocat.sha256 && \
-    websocat --version && \
+RUN apt-get update && \
+    env DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
+        socat curl procps && \
+    rm -rf /var/lib/apt/lists/* && \
     mkdir -p /tmp/usbmuxd /tmp/zebrunner && \
     chown stf:stf /tmp/usbmuxd /tmp/zebrunner && \
     rm -f /var/run/usbmuxd && \
     ln -s /tmp/usbmuxd/usbmuxd /var/run/usbmuxd
+
+# go-ios: the iOS commands of STF (install, launch, reboot), it replaces the one of the base image;
+# websocat: the screen broadcast of BROADCAST_PORT
+COPY --from=tools /out/ios /out/websocat /usr/local/bin/
+RUN ios --version && \
+    websocat --version
 
 # The defaults of the configuration, all of them are documented in README.md.
 # The provider of Android reads every STF_PROVIDER_* variable as its option (STF_PROVIDER_MIN_PORT is --min-port)

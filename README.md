@@ -13,10 +13,13 @@ The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 20.04
 | Base image | `public.ecr.aws/zebrunner/stf:2.7` (pinned by digest) |
 | [go-ios](https://github.com/danielpaulus/go-ios) | 1.3.2, the version of [mcloud-ios-connector](https://github.com/zebrunner/mcloud-ios-connector); it replaces the go-ios of the base image |
 | [websocat](https://github.com/vi/websocat) | 1.13.0 |
+| `socat`, `curl`, `procps` | the versions of the Ubuntu release of the base image |
 
 STF runs the go-ios commands `ios install`, `ios launch` and `ios reboot` for an iOS device. The release binaries of go-ios need glibc 2.34 and the base image has 2.31, so go-ios is built from its sources (checked by SHA-256) without cgo by `golang:1.26.5-alpine`: a static binary of the same version.
 
-Everything the build downloads is pinned: the images by version and digest, go-ios and websocat by version and SHA-256. The image installs no packages of the distribution.
+The image installs the tools of its entrypoint itself, so it does not depend on the ones of the STF base image (the reworked STF image of zebrunner/stf#1052 drops go-ios, socat and curl): `socat`, `curl` and `procps` from the Ubuntu release of the base image.
+
+Everything the build downloads is pinned: the images by version and digest, go-ios and websocat by version and SHA-256 (in the `tools` build stage). The Ubuntu packages are not pinned: their exact versions disappear from the mirror after an update.
 
 ## Build
 
@@ -65,7 +68,7 @@ Every variable has its default in the `Dockerfile`. The entrypoint validates the
 | `STF_PROVIDER_CONNECT_APP_DEALER` | empty | The app-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS. It is not an option of the provider of Android, so it is removed from its environment. |
 | `STF_PROVIDER_CONNECT_DEV_DEALER` | empty | The device-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS, removed for Android as above. |
 | `RETHINKDB_PORT_28015_TCP` | empty | RethinkDB of STF, `tcp://<host>:<port>`, required. |
-| `STF_STORAGE_TOKEN` | empty | The token of the storage of STF (`x-stf-internal-token` of the screenshots and the application installs), passed to STF as `STORAGE_TOKEN`; it must match the one of the STF server. A `STORAGE_TOKEN` set directly is kept when `STF_STORAGE_TOKEN` is empty. |
+| `STF_STORAGE_TOKEN` | empty | The token of the storage of STF (`x-stf-internal-token` of the screenshots and the application installs), it must match the one of the STF server. The reworked STF (zebrunner/stf#1052) reads it, the entrypoint also passes it as `STORAGE_TOKEN` for the STF images that read that one (`3.0-hardening`). A `STORAGE_TOKEN` set directly is kept when `STF_STORAGE_TOKEN` is empty. |
 | `STF_SERVICES_WAIT_TIMEOUT` | `300` | How long in seconds the entrypoint waits for the STF services above (TCP connections) before it asks for a restart. |
 | `STF_SERVICES_WAIT_RETRY` | `30` | The delay in seconds between the checks of the unreachable services. |
 | `STF_SERVICES_WAIT_RESTARTS` | `2` | How many restarts in a row the entrypoint asks for (exit `1`) when the services stay unreachable, then it exits with `0` and the restarts stop. The counter is kept in `/tmp/zebrunner/stf-services-restarts` (it survives the restarts of the container) and is reset by reachable services or by the end of the restarts. |
