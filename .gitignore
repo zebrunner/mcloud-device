@@ -1,0 +1,9 @@
+# >>> mcloud-conventions: the shared part, changed in https://github.com/zebrunner/mcloud-conventions
+# IDE
+.idea/
+*.iml
+# the lint tools of `make lint`
+.venv/
+# macOS
+.DS_Store
+# <<< mcloud-conventions
