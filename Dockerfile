@@ -66,9 +66,20 @@ ENV VERBOSE=false
 # Need root user to clear existing /var/run/usbmuxd socket if any
 USER root
 
+# netcat waits for the STF ports, socat forwards usbmuxd and curl checks WebDriverAgent (start_all.sh)
 RUN apt-get -y update && \
-    apt-get -y install netcat && \
+    apt-get -y install netcat socat curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# go-ios installs, launches and reboots the apps of iOS devices for the ios-device unit of STF
+ARG GO_IOS_VERSION=v1.0.182
+ARG GO_IOS_SHA256=2995c7dbf15aa9387993a054cabb9654bbb3ac41cacd57fd67ae46bf477cea05
+RUN wget -qO /tmp/go-ios-linux.zip https://github.com/danielpaulus/go-ios/releases/download/${GO_IOS_VERSION}/go-ios-linux.zip && \
+    echo "${GO_IOS_SHA256}  /tmp/go-ios-linux.zip" | sha256sum -c - && \
+    unzip -o /tmp/go-ios-linux.zip ios-amd64 -d /tmp/go-ios && \
+    install -m 0755 /tmp/go-ios/ios-amd64 /usr/local/bin/ios && \
+    ios --version && \
+    rm -rf /tmp/go-ios-linux.zip /tmp/go-ios
 
 RUN wget -qO /usr/local/bin/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
     chmod a+x /usr/local/bin/websocat && \
