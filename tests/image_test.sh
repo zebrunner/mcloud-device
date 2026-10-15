@@ -1,6 +1,6 @@
 #!/bin/bash
 # Checks of the docker image: build, contents, configuration and the startup of STF for Android and iOS with fake STF
-# services, adb, usbmuxd and WebDriverAgent (a container of the same image with socat listeners and a python HTTP server).
+# services, adb, usbmuxd and WebDriverAgent (a container of the same image with socat listeners).
 # IMAGE overrides the tag of the tested image (it is built when missing, REBUILD=true builds it anyway),
 # PLATFORM its platform (the image is amd64 only, as its base image).
 source "$(dirname "$0")/lib.sh"
@@ -73,8 +73,13 @@ fi
 section "contents"
 go_ios_version="$(sed -n -E 's/^.*go-ios\/archive\/refs\/tags\/v([0-9.]+)\.tar\.gz.*$/\1/p' Dockerfile)"
 check_contains "go-ios ${go_ios_version} works" "\"version\":\"${go_ios_version}\"" "$(in_image ios --version)"
-check_contains "go-ios is a static binary: no glibc of the build machine is needed" "statically linked" \
-  "$(in_image sh -c 'file -L /usr/local/bin/ios 2> /dev/null || ldd /usr/local/bin/ios 2>&1')"
+# ldd of Ubuntu 20.04 says "statically linked", the one of 22.04 "not a dynamic executable"
+ldd_ios="$(in_image ldd /usr/local/bin/ios)"
+if [[ "$ldd_ios" == *"statically linked"* || "$ldd_ios" == *"not a dynamic executable"* ]]; then
+  pass "go-ios is a static binary: no glibc of the build machine is needed"
+else
+  fail "go-ios is a static binary: no glibc of the build machine is needed" "a dynamic binary" "$ldd_ios"
+fi
 websocat_version="$(sed -n -E 's/^.*websocat\/releases\/download\/v([0-9.]+)\/.*$/\1/p' Dockerfile)"
 check_contains "websocat ${websocat_version} works" "websocat ${websocat_version}" "$(in_image websocat --version)"
 for file in /opt/zebrunner/entrypoint.sh /usr/local/bin/ios /usr/local/bin/websocat; do
@@ -91,7 +96,7 @@ for file in /opt/zebrunner/util/logger.sh /opt/zebrunner/util/debug.sh; do
     fail "${file} is readable" "not readable" "$(in_image ls -l "$file")"
   fi
 done
-for tool in bash curl pgrep python3 socat stf; do
+for tool in bash curl pgrep socat stf timeout; do
   if in_image sh -c "command -v ${tool}" > /dev/null; then
     pass "${tool} is installed"
   else
@@ -136,15 +141,20 @@ check "the restart is counted in the container filesystem" "1" \
 section "fake STF services"
 docker network create "$NETWORK" > /dev/null
 # the ports of push, sub, rethinkdb, the dealers, usbmuxd, the MJPEG of WDA and adb accept and ignore the connections,
-# WebDriverAgent answers its status
+# WebDriverAgent answers every request with its status (socat only, python is not a tool of the image)
 # the script is run by bash of the container
 # shellcheck disable=SC2016
 docker run --detach --name "$SERVICES" --network "$NETWORK" --platform "$PLATFORM" --entrypoint bash "$IMAGE" -c '
   for port in 7270 7250 28015 7160 7260 2222 8101 5037; do
     socat "TCP-LISTEN:${port},fork,reuseaddr" SYSTEM:"cat > /dev/null" &
   done
-  mkdir -p /tmp/wda && echo "{\"value\":{\"ready\":true}}" > /tmp/wda/status
-  cd /tmp/wda && exec python3 -m http.server 8100' > /dev/null
+  cat > /tmp/wda.sh << "EOF"
+#!/bin/bash
+read -r request
+printf "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n{\"value\":{\"ready\":true}}"
+EOF
+  chmod +x /tmp/wda.sh
+  exec socat TCP-LISTEN:8100,fork,reuseaddr EXEC:/tmp/wda.sh' > /dev/null
 # shellcheck disable=SC2329
 services_up() {
   docker exec "$SERVICES" curl -sf -o /dev/null http://127.0.0.1:8100/status
@@ -214,6 +224,6 @@ check_contains "iOS: WebDriverAgent is awaited" 'WebDriverAgent is up: {"value":
 check "iOS: /var/run/usbmuxd is a socket of stf" "socket stf" \
   "$(docker exec "${PREFIX}-ios" stat -L -c '%F %U' /var/run/usbmuxd 2>&1 | sed 's/^.*socket/socket/')"
 docker stop --time 30 "${PREFIX}-ios" > /dev/null
-check_contains "iOS: the status of WebDriverAgent is logged after STF" "HTTP/1.0 200 OK" "$(docker logs "${PREFIX}-ios" 2>&1)"
+check_contains "iOS: the status of WebDriverAgent is logged after STF" "< HTTP/1.0 200 OK" "$(docker logs "${PREFIX}-ios" 2>&1)"
 
 finish

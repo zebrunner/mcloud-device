@@ -40,7 +40,8 @@ PUBLIC_IP_PROTOCOL="${PUBLIC_IP_PROTOCOL,,}"
 WIRELESS="${WIRELESS,,}"
 # The provider of Android reads STF_PROVIDER_HOST as its --host option, the public address is its default
 export STF_PROVIDER_HOST="${STF_PROVIDER_HOST:-$STF_PROVIDER_PUBLIC_IP}"
-# STF reads the token of its storage from STORAGE_TOKEN, mcloud-agent passes it as STF_STORAGE_TOKEN
+# mcloud-agent passes the token of the STF storage as STF_STORAGE_TOKEN, the reworked STF reads it, the STF images up to
+# 3.0-hardening read STORAGE_TOKEN
 if [[ -n "$STF_STORAGE_TOKEN" ]]; then
   export STORAGE_TOKEN="$STF_STORAGE_TOKEN"
 fi

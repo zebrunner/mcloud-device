@@ -9,8 +9,9 @@ check "the base image and the build stage are <image>:<version>@sha256:<digest>"
   "$(grep -vE '^FROM (--platform=\$\{BUILDPLATFORM\} )?[a-z0-9./-]+:[0-9][A-Za-z0-9.-]*@sha256:[0-9a-f]{64}( AS [a-z-]+)?$' <<< "$from_lines")"
 check_contains "the base image is the STF image" "FROM public.ecr.aws/zebrunner/stf:" "$from_lines"
 check_not_contains "no unpinned latest tag" ":latest" "$(grep -v '^ *#' Dockerfile)"
-check "no package of the distribution is installed: the tools are downloads with checksums" "" \
-  "$(grep -nE '(apt-get|apt|apk) .*install' Dockerfile)"
+# the tools of the entrypoint are installed by the image, the STF base image drops them (zebrunner/stf#1052)
+check "the apt packages are the tools of the entrypoint, without recommends" "socat curl procps" \
+  "$(sed -n '/apt-get -y install --no-install-recommends/,/&& \\$/p' Dockerfile | tail -1 | sed -E 's/^ +//; s/ *&& \\$//')"
 downloads="$(grep -cE 'wget .*https://' Dockerfile)"
 check "every download has a sha256 checksum" "$downloads" "$(grep -cE '^ *echo "[0-9a-f]{64}  [^"]+" > ' Dockerfile)"
 check "every checksum is checked" "$downloads" "$(grep -cE 'sha256sum -c ' Dockerfile)"

@@ -6,3 +6,5 @@ ignored:
   - DL3064
   # stf (uid 998) is the user of the base image; the image runs on Docker (mcloud-agent), not Kubernetes runAsNonRoot
   - DL3066
+  # the apt packages come from the Ubuntu release of the pinned base image; exact versions break when the mirror drops them
+  - DL3008
