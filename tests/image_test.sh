@@ -73,8 +73,13 @@ fi
 section "contents"
 go_ios_version="$(sed -n -E 's/^.*go-ios\/archive\/refs\/tags\/v([0-9.]+)\.tar\.gz.*$/\1/p' Dockerfile)"
 check_contains "go-ios ${go_ios_version} works" "\"version\":\"${go_ios_version}\"" "$(in_image ios --version)"
-check_contains "go-ios is a static binary: no glibc of the build machine is needed" "statically linked" \
-  "$(in_image sh -c 'file -L /usr/local/bin/ios 2> /dev/null || ldd /usr/local/bin/ios 2>&1')"
+# ldd of Ubuntu 20.04 says "statically linked", the one of 22.04 "not a dynamic executable"
+ldd_ios="$(in_image ldd /usr/local/bin/ios)"
+if [[ "$ldd_ios" == *"statically linked"* || "$ldd_ios" == *"not a dynamic executable"* ]]; then
+  pass "go-ios is a static binary: no glibc of the build machine is needed"
+else
+  fail "go-ios is a static binary: no glibc of the build machine is needed" "a dynamic binary" "$ldd_ios"
+fi
 websocat_version="$(sed -n -E 's/^.*websocat\/releases\/download\/v([0-9.]+)\/.*$/\1/p' Dockerfile)"
 check_contains "websocat ${websocat_version} works" "websocat ${websocat_version}" "$(in_image websocat --version)"
 for file in /opt/zebrunner/entrypoint.sh /usr/local/bin/ios /usr/local/bin/websocat; do
