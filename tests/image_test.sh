@@ -63,8 +63,8 @@ if [[ "${REBUILD:-false}" != "true" ]] && docker image inspect "$IMAGE" > /dev/n
   skip_check "image builds" "$IMAGE exists, REBUILD=true builds it again"
 elif docker build --progress=plain --platform "$PLATFORM" --provenance=false --tag "$IMAGE" . > "${WORK}/build.log" 2>&1; then
   pass "image builds"
-  # the build checks of docker (#209)
-  check "the build has no warnings" "" "$(grep -i 'warn' "${WORK}/build.log")"
+  # the build checks of docker (#209): "<n> warning(s) found" and the list of the checks
+  check "the build has no warnings" "" "$(grep -E -A10 '^ *[0-9]+ warnings? found' "${WORK}/build.log")"
 else
   fail "image builds" "docker build failed" "$(tail -100 "${WORK}/build.log")"
   finish
@@ -105,7 +105,7 @@ check "the dirs of the entrypoint belong to stf" "stf stf" "$(in_image stat -c '
 section "configuration"
 config="$(docker image inspect "$IMAGE" --format '{{json .Config}}')"
 check_contains "entrypoint" '"Entrypoint":["/opt/zebrunner/entrypoint.sh"]' "$config"
-check_not_contains "no command of the base image" '"Cmd":' "$config"
+check_not_contains "no command of the base image" '"Cmd":[' "$config"
 check_contains "user" '"User":"stf"' "$config"
 check_contains "healthcheck checks the STF process" '"Test":["CMD","pgrep","-f","stf (provider|ios-device)"]' "$config"
 check_contains "license label" '"org.opencontainers.image.licenses":"Apache-2.0"' "$config"
