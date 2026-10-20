@@ -107,6 +107,8 @@ ENV \
     USBMUXD_SOCKET_ADDRESS=connector:2222 \
     USBMUXD_SOCKET_TIMEOUT=60 \
     USBMUXD_SOCKET_PERIOD=5 \
+    # iOS: the go-ios tunnel of the connector container (iOS > 17.4.0)
+    GO_IOS_AGENT_HOST=connector \
     # Logger
     LOGGER_LEVEL=INFO \
     # Debug mode

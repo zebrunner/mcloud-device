@@ -115,7 +115,7 @@ check_contains "user" '"User":"stf"' "$config"
 check_contains "healthcheck checks the STF process" '"Test":["CMD","pgrep","-f","stf (provider|ios-device)"]' "$config"
 check_contains "license label" '"org.opencontainers.image.licenses":"Apache-2.0"' "$config"
 for env in PLATFORM_NAME=android STF_PROVIDER_MIN_PORT=7404 STF_SERVICES_WAIT_TIMEOUT=300 STF_SERVICES_WAIT_RESTARTS=2 \
-  WDA_HOST=connector USBMUXD_SOCKET_ADDRESS=connector:2222 BROADCAST_PORT=2223 LOGGER_LEVEL=INFO DEBUG=false; do
+  WDA_HOST=connector USBMUXD_SOCKET_ADDRESS=connector:2222 GO_IOS_AGENT_HOST=connector BROADCAST_PORT=2223 LOGGER_LEVEL=INFO DEBUG=false; do
   check_contains "default ${env}" "\"${env}\"" "$config"
 done
 

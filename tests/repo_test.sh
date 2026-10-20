@@ -19,12 +19,12 @@ check_contains "go-ios is built without cgo" "CGO_ENABLED=0" "$(cat Dockerfile)"
 
 section "Dockerfile env vars"
 # the variables of the configuration are used by the scripts of the image or by STF: the provider of Android reads
-# STF_PROVIDER_*, node and ZeroMQ read theirs
+# STF_PROVIDER_*, node, ZeroMQ and go-ios read theirs
 env_vars="$(sed -n -E 's/^(ENV)?[[:space:]]+([A-Z][A-Z0-9_]*)=.*/\2/p' Dockerfile | sort -u)"
 check "the env vars are found" "true" "$([[ -n "$env_vars" ]] && echo true || echo false)"
 unused=""
 for var in $env_vars; do
-  if ! grep -qw "$var" entrypoint.sh util/*.sh && [[ ! "$var" =~ ^(STF_PROVIDER_|ZMQ_|NODE_) ]]; then
+  if ! grep -qw "$var" entrypoint.sh util/*.sh && [[ ! "$var" =~ ^(STF_PROVIDER_|ZMQ_|NODE_|GO_IOS_) ]]; then
     unused="${unused}${var} "
   fi
 done

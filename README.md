@@ -121,6 +121,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `USBMUXD_SOCKET_ADDRESS` | `connector:2222` | usbmuxd of the connector container, `<host>:<port>`, required unless `WIRELESS=true`. go-ios reads it itself, the entrypoint also forwards `/var/run/usbmuxd` to it for the tools that don't. |
 | `USBMUXD_SOCKET_TIMEOUT` | `60` | How long in seconds the entrypoint waits for usbmuxd. |
 | `USBMUXD_SOCKET_PERIOD` | `5` | The delay in seconds between the checks of usbmuxd. |
+| `GO_IOS_AGENT_HOST` | `connector` | The host of the go-ios tunnel API (port `60105`). The connector container shares its userspace tunnel for iOS newer than 17.4.0, so go-ios in this container (logs, apps, files, network info) reaches iOS 17+ services through it without a tunnel of its own. |
 
 ### Logs and debug
 
