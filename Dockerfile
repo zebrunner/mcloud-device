@@ -1,5 +1,6 @@
 # check=skip=SecretsUsedInArgOrEnv
-# STF_STORAGE_TOKEN is declared empty as documentation of the supported env vars; the real value is passed at runtime
+# STF_STORAGE_TOKEN and the STF_ZMQ_CURVE_* keys are declared empty as documentation of the supported env vars; the real
+# values are passed at runtime
 
 # The tools of the image do not depend on the STF base image, which drops them (zebrunner/stf#1052).
 # go-ios of mcloud-ios-connector is built from its sources without cgo: a static binary, the release binaries need
@@ -74,6 +75,8 @@ ENV \
     STF_PROVIDER_CONNECT_DEV_DEALER="" \
     RETHINKDB_PORT_28015_TCP="" \
     STF_STORAGE_TOKEN="" \
+    STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="" \
+    STF_ZMQ_CURVE_SECRET_KEY="" \
     STF_SERVICES_WAIT_TIMEOUT=300 \
     STF_SERVICES_WAIT_RETRY=30 \
     STF_SERVICES_WAIT_RESTARTS=2 \
