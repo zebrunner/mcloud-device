@@ -2,7 +2,7 @@
 # Checks of the docker image: build, contents, configuration and the startup of STF for Android and iOS with fake STF
 # services, adb, usbmuxd and WebDriverAgent (a container of the same image with socat listeners).
 # IMAGE overrides the tag of the tested image (it is built when missing, REBUILD=true builds it anyway),
-# PLATFORM its platform (the image is amd64 only, as its base image).
+# PLATFORM its platform (linux/amd64 by default: the platform of the image is the one of its base image).
 source "$(dirname "$0")/lib.sh"
 cd "$REPO" || exit 1
 
@@ -80,7 +80,7 @@ if [[ "$ldd_ios" == *"statically linked"* || "$ldd_ios" == *"not a dynamic execu
 else
   fail "go-ios is a static binary: no glibc of the build machine is needed" "a dynamic binary" "$ldd_ios"
 fi
-websocat_version="$(sed -n -E 's/^.*websocat\/releases\/download\/v([0-9.]+)\/.*$/\1/p' Dockerfile)"
+websocat_version="$(sed -n -E 's/^.*websocat\/releases\/download\/v([0-9.]+)\/.*$/\1/p' Dockerfile | sort -u)"
 check_contains "websocat ${websocat_version} works" "websocat ${websocat_version}" "$(in_image websocat --version)"
 for file in /opt/zebrunner/entrypoint.sh /usr/local/bin/ios /usr/local/bin/websocat; do
   if in_image test -x "$file" > /dev/null; then
