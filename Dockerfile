@@ -4,8 +4,10 @@
 # The tools of the image do not depend on the STF base image, which drops them (zebrunner/stf#1052).
 # go-ios of mcloud-ios-connector is built from its sources without cgo: a static binary, the release binaries need
 # glibc 2.34 and the stf:2.7 base image (Ubuntu 20.04) has 2.31. websocat is the static musl build.
-# The stage runs on the platform of the builder, the binaries are linux/amd64
+# The stage runs on the platform of the builder, the binaries are built for the target platform (amd64 or arm64)
 FROM --platform=${BUILDPLATFORM} golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS tools
+
+ARG TARGETARCH
 
 WORKDIR /go-ios
 RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive/refs/tags/v1.3.2.tar.gz && \
@@ -16,19 +18,25 @@ RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive
     # the version of the release build, `ios --version` prints it
     sed -i 's/^const version = "local-build"$/const version = "1.3.2"/' main.go && \
     grep -q '^const version = "1.3.2"$' main.go && \
-    env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local go build -trimpath -ldflags="-s -w" -o /out/ios && \
-    wget -q -O /out/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
-    echo "c3a63a2a77d1abf5baef5bbf7474690ac2896e2dabd60498e56361a2fd131d8f  /out/websocat" > /tmp/websocat.sha256 && \
-    sha256sum -c /tmp/websocat.sha256 && \
+    env CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} GOTOOLCHAIN=local go build -trimpath -ldflags="-s -w" -o /out/ios && \
+    if [ "${TARGETARCH}" = "arm64" ]; then \
+      wget -q -O /out/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.aarch64-unknown-linux-musl && \
+      echo "ef90459c2886463ddb889eb5df454dede7067f594e3be482e182dd0752340cca  /out/websocat" > /tmp/websocat.sha256 && \
+      sha256sum -c /tmp/websocat.sha256; \
+    else \
+      wget -q -O /out/websocat https://github.com/vi/websocat/releases/download/v1.13.0/websocat_max.x86_64-unknown-linux-musl && \
+      echo "c3a63a2a77d1abf5baef5bbf7474690ac2896e2dabd60498e56361a2fd131d8f  /out/websocat" > /tmp/websocat.sha256 && \
+      sha256sum -c /tmp/websocat.sha256; \
+    fi && \
     chmod 755 /out/websocat
 
 FROM public.ecr.aws/zebrunner/stf:2.7@sha256:4b1fed9604c11318c622eda624bf50037fa02f8ac73a98ee92f03e5479622a68
 
-# The base image is linux/amd64 only (its STF build), so are go-ios and websocat: another platform would build
-# an image with amd64 binaries, so the build stops
+# go-ios and websocat are built for the target platform: a base image of another platform (stf:2.7 is linux/amd64
+# only) would give an image with binaries of two platforms, so the build stops
 ARG TARGETARCH
-RUN if [ -n "${TARGETARCH}" ] && [ "${TARGETARCH}" != "amd64" ]; then \
-      echo "[error] the image is linux/amd64 only: the base image is amd64 only, got ${TARGETARCH}" >&2; \
+RUN if [ -n "${TARGETARCH}" ] && [ "$(dpkg --print-architecture)" != "${TARGETARCH}" ]; then \
+      echo "[error] the base image is $(dpkg --print-architecture), the target platform is ${TARGETARCH}" >&2; \
       exit 1; \
     fi
 
