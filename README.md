@@ -41,7 +41,7 @@ docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<ud
   -e STF_PROVIDER_MIN_PORT=7404 -e STF_PROVIDER_MAX_PORT=7410 -p 7404-7410:7404-7410 \
   -e STF_PROVIDER_PUBLIC_IP=stf.example.com -e PUBLIC_IP_PORT=443 -e PUBLIC_IP_PROTOCOL=https \
   -e STF_PROVIDER_CONNECT_SUB=tcp://stf.example.com:7250 -e STF_PROVIDER_CONNECT_PUSH=tcp://stf.example.com:7270 \
-  -e RETHINKDB_PORT_28015_TCP=tcp://stf.example.com:28015 -e STF_STORAGE_TOKEN=<token> \
+  -e STF_STORAGE_TOKEN=<token> -e STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=<key> -e STF_ZMQ_CURVE_SECRET_KEY=<key> \
   public.ecr.aws/zebrunner/mcloud-device:<version>
 # iOS: the same with
 #   -e PLATFORM_NAME=ios -e WDA_HOST=connector -e WDA_WAIT_TIMEOUT=60
@@ -69,7 +69,9 @@ Every variable has its default in the `Dockerfile`. The entrypoint validates the
 | `STF_PROVIDER_CONNECT_SUB` | empty | The ZeroMQ PUB endpoint of STF, `tcp://<host>:<port>`, required. |
 | `STF_PROVIDER_CONNECT_APP_DEALER` | empty | The app-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS. It is not an option of the provider of Android, so it is removed from its environment. |
 | `STF_PROVIDER_CONNECT_DEV_DEALER` | empty | The device-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS, removed for Android as above. |
-| `RETHINKDB_PORT_28015_TCP` | empty | RethinkDB of STF, `tcp://<host>:<port>`, required. |
+| `RETHINKDB_PORT_28015_TCP` | empty | RethinkDB of STF, `tcp://<host>:<port>`: the device units of the current STF have no database, the ones of the earlier STF base images need it (with its password `RETHINKDB_ENV_AUTHKEY` when it has one). It is awaited when it is set. |
+| `STF_ZMQ_CURVE_SERVER_PUBLIC_KEY` | empty | The CURVE public key of the triproxies of the STF server (`variables.env` of mcloud), 64 hex characters: STF connects to ZeroMQ over CURVE. Set with `STF_ZMQ_CURVE_SECRET_KEY`, the STF server needs them when its ZeroMQ security is on ([ZeroMQ of STF](https://github.com/zebrunner/stf/blob/develop/ZEBRUNNER.md#zeromq)). |
+| `STF_ZMQ_CURVE_SECRET_KEY` | empty | The CURVE secret key of the device host (mcloud-agent makes it), 64 hex characters; its public key is in `STF_ZMQ_CURVE_CLIENT_KEYS` of the STF server. Not logged. |
 | `STF_STORAGE_TOKEN` | empty | The token of the storage of STF (`x-stf-internal-token` of the screenshots and the application installs), it must match the one of the STF server. The reworked STF (zebrunner/stf#1052) reads it, the entrypoint also passes it as `STORAGE_TOKEN` for the STF images that read that one (`3.0-hardening`). A `STORAGE_TOKEN` set directly is kept when `STF_STORAGE_TOKEN` is empty. |
 | `STF_SERVICES_WAIT_TIMEOUT` | `300` | How long in seconds the entrypoint waits for the STF services above (TCP connections) before it asks for a restart. |
 | `STF_SERVICES_WAIT_RETRY` | `30` | The delay in seconds between the checks of the unreachable services. |
@@ -137,7 +139,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 ## Startup
 
 1. The configuration is validated (see [Configuration](#configuration)).
-2. The STF services are awaited: push, sub, RethinkDB and for iOS the dealers. Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds.
+2. The STF services are awaited: push, sub, RethinkDB when it is set and for iOS the dealers. Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds.
 3. iOS: `/var/run/usbmuxd` is forwarded to `USBMUXD_SOCKET_ADDRESS` (socat, skipped with `WIRELESS=true`), then WebDriverAgent is awaited.
 4. The screen WebSocket is broadcast to `BROADCAST_PORT`; websocat is started again a second after it exits.
 5. STF starts: `stf provider` for Android, `stf ios-device` for iOS. The entrypoint passes `SIGTERM` of `docker stop` to STF, so it stops gracefully, and exits with the exit code of STF. For iOS the status of WebDriverAgent is logged after STF (#184).

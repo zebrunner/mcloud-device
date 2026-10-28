@@ -64,7 +64,7 @@ exit 0'
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
-  STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT; do
+  STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -80,7 +80,7 @@ scenario() {
   rm -rf "${WORK:?}"/zebrunner/* "${WORK:?}"/usbmuxd/* "${WORK}"/*.n
   reset_calls
   # the variables of the previous scenario
-  unset DEBUG VERBOSE STORAGE_TOKEN FAKE_STF FAKE_STF_EXIT
+  unset DEBUG VERBOSE STORAGE_TOKEN FAKE_STF FAKE_STF_EXIT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY
   # the defaults of the Dockerfile
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
@@ -124,7 +124,7 @@ check "valid configuration starts STF" "0" "$STATUS"
 check_contains "banner" "MCLOUD-DEVICE" "$OUT"
 check_not_contains "valid configuration is not reported" "Invalid configuration" "$OUT"
 
-for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB RETHINKDB_PORT_28015_TCP STF_PROVIDER_PUBLIC_IP; do
+for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP; do
   scenario
   export "${var}="
   run_entrypoint
@@ -409,6 +409,44 @@ check_contains "the exit of websocat is logged" "The screen broadcast (websocat)
 broadcasts="$(calls websocat | wc -l)"
 /bin/sleep 0.5
 check "websocat is not started again after the entrypoint" "$broadcasts" "$(calls websocat | wc -l)"
+
+section "RethinkDB and ZeroMQ security"
+for platform in android ios; do
+  scenario "$platform"
+  RETHINKDB_PORT_28015_TCP=""
+  run_entrypoint
+  check "${platform}: STF starts without RethinkDB" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
+  check_not_contains "${platform}: RethinkDB is not awaited without it" "rethink-host" "$(calls socat)"
+done
+scenario
+run_entrypoint
+check_contains "RethinkDB is awaited when it is set (the STF images before the current one)" "TCP:rethink-host:28015" \
+  "$(calls socat)"
+check_contains "ZeroMQ without CURVE is reported" "ZeroMQ without CURVE" "$OUT"
+
+server_key="$(printf '%064d' 0 | tr 0 a)"
+secret_key="$(printf '%064d' 0 | tr 0 b)"
+scenario ios
+export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="$secret_key"
+run_entrypoint
+check "the CURVE keys start STF" "0" "$STATUS"
+check_contains "STF gets the public key of the server" "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$(calls env)"
+check_contains "STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$(calls env)"
+check_contains "ZeroMQ with CURVE is reported" "ZeroMQ with CURVE" "$OUT"
+check_not_contains "the secret key is not logged" "$secret_key" "$OUT"
+
+scenario
+export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key"
+run_entrypoint
+check_contains "one CURVE key without the other is reported" "are set together" "$OUT"
+check "nothing is started with one CURVE key" "0:" "${STATUS}:$(started)"
+
+scenario
+export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="not-a-key-${secret_key}"
+run_entrypoint
+check_contains "an invalid CURVE key is reported" "STF_ZMQ_CURVE_SECRET_KEY must be a key of 64 hex characters" "$OUT"
+check_not_contains "the invalid secret key is not logged" "not-a-key" "$OUT"
+check "nothing is started with an invalid CURVE key" "" "$(started)"
 
 section "STF of Android"
 scenario
