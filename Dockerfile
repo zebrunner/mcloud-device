@@ -4,7 +4,7 @@
 
 # The tools of the image do not depend on the STF base image, which drops them (zebrunner/stf#1052).
 # go-ios of mcloud-ios-connector is built from its sources without cgo: a static binary, the release binaries need
-# glibc 2.34 and the stf:2.7 base image (Ubuntu 20.04) has 2.31. websocat is the static musl build.
+# glibc 2.34, a static binary does not depend on the glibc of the base image. websocat is the static musl build.
 # The stage runs on the platform of the builder, the binaries are built for the target platform (amd64 or arm64)
 FROM --platform=${BUILDPLATFORM} golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS tools
 
@@ -31,10 +31,10 @@ RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive
     fi && \
     chmod 755 /out/websocat
 
-FROM public.ecr.aws/zebrunner/stf:2.7@sha256:4b1fed9604c11318c622eda624bf50037fa02f8ac73a98ee92f03e5479622a68
+FROM public.ecr.aws/zebrunner/stf:3.1
 
-# go-ios and websocat are built for the target platform: a base image of another platform (stf:2.7 is linux/amd64
-# only) would give an image with binaries of two platforms, so the build stops
+# go-ios and websocat are built for the target platform: a base image of another platform (stf:3.1 is linux/amd64
+# and linux/arm64) would give an image with binaries of two platforms, so the build stops
 ARG TARGETARCH
 RUN if [ -n "${TARGETARCH}" ] && [ "$(dpkg --print-architecture)" != "${TARGETARCH}" ]; then \
       echo "[error] the base image is $(dpkg --print-architecture), the target platform is ${TARGETARCH}" >&2; \

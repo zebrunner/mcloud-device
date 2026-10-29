@@ -2,7 +2,7 @@
 
 The STF provider of one Android or iOS device of [Zebrunner MCloud](https://github.com/zebrunner/mcloud): the `device-<udid>-stf` container that [mcloud-agent](https://github.com/zebrunner/mcloud-agent) starts next to the connector, appium and uploader containers of every device. It waits for the STF services (and for usbmuxd and WebDriverAgent of an iOS device), then runs the provider of [STF](https://github.com/zebrunner/stf) for the device: `stf provider` for Android, `stf ios-device` for iOS.
 
-The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 20.04) and is built for the platform of its base image: `linux/amd64` with `stf:2.7`, which is amd64 only. go-ios and websocat are built for `linux/amd64` and `linux/arm64`; an arm64 image (Apple Silicon Macs, without Rosetta) needs a multi-arch STF base image (zebrunner/stf#1063), the build stops when the platform of the base image is not the target one.
+The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 22.04) of the STF of [mcloud](https://github.com/zebrunner/mcloud) (`TAG_STF` of its `.env`) and is built for the platform of its base image: `stf:3.1` is `linux/amd64` and `linux/arm64` (zebrunner/stf#1063), so are go-ios and websocat; the build stops when the platform of the base image is not the target one.
 
 > Follow the installation and configuration guide in [MCloud](https://github.com/zebrunner/mcloud) to reuse this image effectively.
 
@@ -10,12 +10,12 @@ The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 20.04
 
 | Component | Version |
 | --- | --- |
-| Base image | `public.ecr.aws/zebrunner/stf:2.7` (pinned by digest) |
+| Base image | `public.ecr.aws/zebrunner/stf:3.1` (pinned by digest) |
 | [go-ios](https://github.com/danielpaulus/go-ios) | 1.3.2, the version of [mcloud-ios-connector](https://github.com/zebrunner/mcloud-ios-connector); it replaces the go-ios of the base image |
 | [websocat](https://github.com/vi/websocat) | 1.13.0, the static musl build of the platform (`x86_64` or `aarch64`) |
 | `socat`, `curl`, `procps` | the versions of the Ubuntu release of the base image |
 
-STF runs the go-ios commands `ios install`, `ios launch` and `ios reboot` for an iOS device. The release binaries of go-ios need glibc 2.34 and the base image has 2.31, so go-ios is built from its sources (checked by SHA-256) without cgo by `golang:1.26.5-alpine`: a static binary of the same version.
+STF runs the go-ios commands `ios install`, `ios launch` and `ios reboot` for an iOS device. go-ios is built from its sources (checked by SHA-256) without cgo by `golang:1.26.5-alpine`: a static binary of the same version for both platforms, which does not depend on the glibc of the base image.
 
 The image installs the tools of its entrypoint itself, so it does not depend on the ones of the STF base image (the reworked STF image of zebrunner/stf#1052 drops go-ios, socat and curl): `socat`, `curl` and `procps` from the Ubuntu release of the base image.
 
@@ -27,7 +27,7 @@ Everything the build downloads is pinned: the images by version and digest, go-i
 docker build --platform linux/amd64 --build-arg VERSION=3.1 --tag public.ecr.aws/zebrunner/mcloud-device:3.1 .
 ```
 
-With a multi-arch STF base image, `docker buildx build --platform linux/amd64,linux/arm64` builds both. Under Rosetta (an amd64 image on an Apple Silicon Mac) `stf ios-device` hangs on its first go-ios command, so the iOS simulators of a Mac need the arm64 image.
+`docker buildx build --platform linux/amd64,linux/arm64` builds both. Under Rosetta (an amd64 image on an Apple Silicon Mac) `stf ios-device` hangs on its first go-ios command, so the iOS simulators of a Mac need the arm64 image.
 
 ## Run
 
