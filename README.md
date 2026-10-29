@@ -2,7 +2,7 @@
 
 The STF provider of one Android or iOS device of [Zebrunner MCloud](https://github.com/zebrunner/mcloud): the `device-<udid>-stf` container that [mcloud-agent](https://github.com/zebrunner/mcloud-agent) starts next to the connector, appium and uploader containers of every device. It waits for the STF services (and for usbmuxd and WebDriverAgent of an iOS device), then runs the provider of [STF](https://github.com/zebrunner/stf) for the device: `stf provider` for Android, `stf ios-device` for iOS.
 
-The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 22.04) of the STF of [mcloud](https://github.com/zebrunner/mcloud) (`TAG_STF` of its `.env`) and is built for the platform of its base image: `stf:3.1` is `linux/amd64` and `linux/arm64` (zebrunner/stf#1063), so are go-ios and websocat; the build stops when the platform of the base image is not the target one.
+The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 26.04, zebrunner/stf#1089) of the STF of [mcloud](https://github.com/zebrunner/mcloud) (`TAG_STF` of its `.env`) and is built for the platform of its base image: `stf:3.1` is `linux/amd64` and `linux/arm64` (zebrunner/stf#1063), so are go-ios and websocat; the build stops when the platform of the base image is not the target one.
 
 > Follow the installation and configuration guide in [MCloud](https://github.com/zebrunner/mcloud) to reuse this image effectively.
 
