@@ -24,10 +24,17 @@ Everything the build downloads is pinned: the images by version and digest, go-i
 ## Build
 
 ```bash
-docker build --platform linux/amd64 --build-arg VERSION=3.1 --tag public.ecr.aws/zebrunner/mcloud-device:3.1 .
+make build VERSION=3.1   # public.ecr.aws/zebrunner/mcloud-device:3.1 in the local docker
+make push VERSION=3.1    # built by docker buildx and pushed: docker login public.ecr.aws first
 ```
 
-`docker buildx build --platform linux/amd64,linux/arm64` builds both. Under Rosetta (an amd64 image on an Apple Silicon Mac) `stf ios-device` hangs on its first go-ios command, so the iOS simulators of a Mac need the arm64 image.
+`make build` builds the image for the platform of this machine, `make push` builds `linux/amd64` and `linux/arm64` (`PLATFORMS`) with `docker buildx` and pushes them as one multi-platform image. `IMAGE_REPO` sets another repository (e.g. `IMAGE_REPO=registry.example.com/mcloud-device`), `VERSION` is the tag and the
+`org.opencontainers.image.version` label (`dev` by default, required by `push`). `make push` uses the buildx builder
+`mcloud` (docker-container driver), which it creates once; another platform than the one of the machine needs QEMU
+(`docker run --privileged --rm tonistiigi/binfmt --install all`).
+
+Under emulation (an amd64 image on an Apple Silicon Mac) `stf ios-device` hangs on its first go-ios command, so the iOS
+simulators of a Mac need the arm64 image.
 
 ## Run
 
