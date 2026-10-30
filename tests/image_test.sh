@@ -11,6 +11,11 @@ PLATFORM="${PLATFORM:-linux/amd64}"
 PREFIX="mcloud-device-test-$$"
 NETWORK="${PREFIX}-net"
 SERVICES="${PREFIX}-services"
+# the token of the STF storage and the CURVE keys of ZeroMQ (64 hex characters), required by the entrypoint
+SERVER_KEY="$(printf '%064d' 0 | tr 0 a)"
+SECRET_KEY="$(printf '%064d' 0 | tr 0 b)"
+SECRETS=(--env STF_STORAGE_TOKEN=storage-token --env "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${SERVER_KEY}")
+SECRETS+=(--env "STF_ZMQ_CURVE_SECRET_KEY=${SECRET_KEY}")
 
 require_cmd docker
 docker info > /dev/null 2>&1 || skip "requires a running docker daemon"
@@ -54,8 +59,8 @@ is_started() {
 start_device() {
   docker run --detach --name "$1" --network "$NETWORK" --platform "$PLATFORM" \
     --env STF_PROVIDER_CONNECT_PUSH="tcp://${SERVICES}:7270" --env STF_PROVIDER_CONNECT_SUB="tcp://${SERVICES}:7250" \
-    --env RETHINKDB_PORT_28015_TCP="tcp://${SERVICES}:28015" --env STF_PROVIDER_PUBLIC_IP=stf.example.com \
-    --env STF_PROVIDER_HOST=provider.example.com "${@:2}" "$IMAGE" > /dev/null
+    --env STF_PROVIDER_PUBLIC_IP=stf.example.com --env STF_PROVIDER_HOST=provider.example.com "${SECRETS[@]}" \
+    "${@:2}" "$IMAGE" > /dev/null
 }
 
 section "build"
@@ -124,6 +129,9 @@ validation="$(docker run --rm --platform "$PLATFORM" "$IMAGE" 2>&1)"
 status=$?
 check_contains "banner" "MCLOUD-DEVICE" "$validation"
 check_contains "the STF services are required" "STF_PROVIDER_CONNECT_PUSH is required but empty or unset." "$validation"
+for var in STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+  check_contains "${var} is required" "${var} is required but empty or unset." "$validation"
+done
 check_contains "invalid configuration ends the entrypoint" "Invalid configuration. Exiting!" "$validation"
 check "invalid configuration exits with 0" "0" "$status"
 validation="$(docker run --rm --platform "$PLATFORM" --env PLATFORM_NAME=windows "$IMAGE" 2>&1)"
@@ -131,7 +139,7 @@ check_contains "invalid PLATFORM_NAME is reported" "PLATFORM_NAME must be androi
 
 section "unreachable STF services"
 docker run --name "${PREFIX}-down" --platform "$PLATFORM" --env STF_PROVIDER_CONNECT_PUSH=tcp://127.0.0.1:1 \
-  --env STF_PROVIDER_CONNECT_SUB=tcp://127.0.0.1:2 --env RETHINKDB_PORT_28015_TCP=tcp://127.0.0.1:3 \
+  --env STF_PROVIDER_CONNECT_SUB=tcp://127.0.0.1:2 "${SECRETS[@]}" \
   --env STF_SERVICES_WAIT_TIMEOUT=0 "$IMAGE" > "${WORK}/down.log" 2>&1
 check "unreachable services ask for a restart" "1" "$?"
 check_contains "the restart is reported" "Restarting (1 of 2)!" "$(cat "${WORK}/down.log")"
@@ -140,12 +148,12 @@ check "the restart is counted in the container filesystem" "1" \
 
 section "fake STF services"
 docker network create "$NETWORK" > /dev/null
-# the ports of push, sub, rethinkdb, the dealers, usbmuxd, the MJPEG of WDA and adb accept and ignore the connections,
+# the ports of push, sub, the dealers, usbmuxd, the MJPEG of WDA and adb accept and ignore the connections,
 # WebDriverAgent answers every request with its status (socat only, python is not a tool of the image)
 # the script is run by bash of the container
 # shellcheck disable=SC2016
 docker run --detach --name "$SERVICES" --network "$NETWORK" --platform "$PLATFORM" --entrypoint bash "$IMAGE" -c '
-  for port in 7270 7250 28015 7160 7260 2222 8101 5037; do
+  for port in 7270 7250 7160 7260 2222 8101 5037; do
     socat "TCP-LISTEN:${port},fork,reuseaddr" SYSTEM:"cat > /dev/null" &
   done
   cat > /tmp/wda.sh << "EOF"
