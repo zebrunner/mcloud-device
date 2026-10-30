@@ -40,11 +40,6 @@ PUBLIC_IP_PROTOCOL="${PUBLIC_IP_PROTOCOL,,}"
 WIRELESS="${WIRELESS,,}"
 # The provider of Android reads STF_PROVIDER_HOST as its --host option, the public address is its default
 export STF_PROVIDER_HOST="${STF_PROVIDER_HOST:-$STF_PROVIDER_PUBLIC_IP}"
-# mcloud-agent passes the token of the STF storage as STF_STORAGE_TOKEN, the reworked STF reads it, the STF images up to
-# 3.0-hardening read STORAGE_TOKEN
-if [[ -n "$STF_STORAGE_TOKEN" ]]; then
-  export STORAGE_TOKEN="$STF_STORAGE_TOKEN"
-fi
 wdaStatusUrl="http://${WDA_HOST}:${WDA_PORT}/status"
 # The usbmuxd socket of /var/run/usbmuxd (a symlink to it, see Dockerfile)
 usbmuxdSocket="/tmp/usbmuxd/usbmuxd"
@@ -64,7 +59,8 @@ if [[ ! "$WIRELESS" =~ ^(true|false)$ ]]; then
   configError "WIRELESS must be true or false, but it is '${WIRELESS}'."
 fi
 
-requiredVars=(STF_PROVIDER_PUBLIC_IP)
+# the token of the STF storage and the CURVE keys of ZeroMQ are read by STF itself (the values are not logged)
+requiredVars=(STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
 # the STF services of tcp://<host>:<port>, they are awaited before the start
 stfServices=(STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB)
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
@@ -76,20 +72,11 @@ for var in "${requiredVars[@]}" "${stfServices[@]}"; do
     configError "${var} is required but empty or unset."
   fi
 done
-# RethinkDB only when it is set: the device units of the current STF have no database, the earlier ones need it
-if [[ -n "$RETHINKDB_PORT_28015_TCP" ]]; then
-  stfServices+=(RETHINKDB_PORT_28015_TCP)
-fi
-# The CURVE keys of ZeroMQ, read by STF itself: both or none (the values are not logged)
 for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
     configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
   fi
 done
-if [[ -n "$STF_ZMQ_CURVE_SERVER_PUBLIC_KEY" && -z "$STF_ZMQ_CURVE_SECRET_KEY" ]] ||
-  [[ -z "$STF_ZMQ_CURVE_SERVER_PUBLIC_KEY" && -n "$STF_ZMQ_CURVE_SECRET_KEY" ]]; then
-  configError "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY and STF_ZMQ_CURVE_SECRET_KEY are set together."
-fi
 for var in "${stfServices[@]}"; do
   if [[ -n "${!var}" ]] && ! parseTcpUrl "${!var}"; then
     configError "${var} must be tcp://<host>:<port>, but it is '${!var}'."
@@ -157,11 +144,6 @@ if [[ ${#pendingServices[@]} -gt 0 ]]; then
 fi
 rm -f "$stfRestartsFile"
 logger "INFO" "All the STF services are reachable."
-if [[ -n "$STF_ZMQ_CURVE_SERVER_PUBLIC_KEY" ]]; then
-  logger "INFO" "ZeroMQ with CURVE: STF accepts the public key of STF_ZMQ_CURVE_SECRET_KEY in STF_ZMQ_CURVE_CLIENT_KEYS only."
-else
-  logger "WARN" "ZeroMQ without CURVE: set STF_ZMQ_CURVE_SERVER_PUBLIC_KEY and STF_ZMQ_CURVE_SECRET_KEY of the STF server."
-fi
 
 #### Forward usbmuxd (iOS)
 # go-ios and the other tools read USBMUXD_SOCKET_ADDRESS themselves, /var/run/usbmuxd is forwarded for the ones that don't.

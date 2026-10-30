@@ -63,7 +63,7 @@ exit 0'
 # the stub body is expanded when the stub runs
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
-for var in STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
+for var in STF_STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
   STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
@@ -75,17 +75,22 @@ fi
 [[ "$FAKE_STF" == busy ]] && /bin/sleep 1
 exit "${FAKE_STF_EXIT:-0}"'
 
+# the CURVE keys of the scenarios, 64 hex characters
+server_key="$(printf '%064d' 0 | tr 0 a)"
+secret_key="$(printf '%064d' 0 | tr 0 b)"
+
 # scenario <platform>: a fresh state, an Android (by default) or an iOS device with reachable STF services
 scenario() {
   rm -rf "${WORK:?}"/zebrunner/* "${WORK:?}"/usbmuxd/* "${WORK}"/*.n
   reset_calls
   # the variables of the previous scenario
-  unset DEBUG VERBOSE STORAGE_TOKEN FAKE_STF FAKE_STF_EXIT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY
+  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT
   # the defaults of the Dockerfile
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
   export STF_PROVIDER_CONNECT_APP_DEALER=tcp://app-host:7160 STF_PROVIDER_CONNECT_DEV_DEALER=tcp://dev-host:7260
-  export RETHINKDB_PORT_28015_TCP=tcp://rethink-host:28015 STF_STORAGE_TOKEN=""
+  export STF_STORAGE_TOKEN=storage-token
+  export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="$secret_key"
   export STF_SERVICES_WAIT_TIMEOUT=300 STF_SERVICES_WAIT_RETRY=30 STF_SERVICES_WAIT_RESTARTS=2
   export STF_PROVIDER_PUBLIC_IP=stf.example.com PUBLIC_IP_PORT=80 PUBLIC_IP_PROTOCOL=http
   export STF_PROVIDER_NAME=mcloud-linux STF_PROVIDER_HOST=provider-host STF_PROVIDER_DEVICE_NAME="My Phone"
@@ -124,7 +129,8 @@ check "valid configuration starts STF" "0" "$STATUS"
 check_contains "banner" "MCLOUD-DEVICE" "$OUT"
 check_not_contains "valid configuration is not reported" "Invalid configuration" "$OUT"
 
-for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP; do
+for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN \
+  STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   scenario
   export "${var}="
   run_entrypoint
@@ -251,7 +257,7 @@ section "STF services"
 scenario
 run_entrypoint
 socat_checks="$(calls socat)"
-for host in push-host:7270 sub-host:7250 rethink-host:28015; do
+for host in push-host:7270 sub-host:7250; do
   check_contains "Android: ${host} is checked" "TCP:${host}" "$socat_checks"
 done
 check_not_contains "Android: the dealers are not checked" "app-host" "$socat_checks"
@@ -261,7 +267,7 @@ check "reachable services are not awaited" "" "$(waits)"
 
 scenario ios
 run_entrypoint
-for host in push-host:7270 sub-host:7250 rethink-host:28015 app-host:7160 dev-host:7260; do
+for host in push-host:7270 sub-host:7250 app-host:7160 dev-host:7260; do
   check_contains "iOS: ${host} is checked" "TCP:${host}" "$(calls socat)"
 done
 
@@ -278,12 +284,12 @@ check "a reachable service is not checked again" "1" "$(calls socat | grep -c pu
 check_contains "an unreachable service is reported" "STF_PROVIDER_CONNECT_SUB 'tcp://sub-host:7250' is not reachable." "$OUT"
 
 scenario
-FAKE_DOWN="push-host rethink-host"
+FAKE_DOWN="push-host sub-host"
 STF_SERVICES_WAIT_TIMEOUT=0
 run_entrypoint
 check "unreachable services ask for a restart" "1" "$STATUS"
 check_contains "the unreachable services are listed" \
-  "STF services are not reachable: STF_PROVIDER_CONNECT_PUSH RETHINKDB_PORT_28015_TCP. Restarting (1 of 2)!" "$OUT"
+  "STF services are not reachable: STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB. Restarting (1 of 2)!" "$OUT"
 check "the restart is counted" "1" "$(cat "${WORK}/zebrunner/stf-services-restarts")"
 check "STF is not started with unreachable services" "" "$(started)$(calls websocat)"
 run_entrypoint
@@ -410,39 +416,29 @@ broadcasts="$(calls websocat | wc -l)"
 /bin/sleep 0.5
 check "websocat is not started again after the entrypoint" "$broadcasts" "$(calls websocat | wc -l)"
 
-section "RethinkDB and ZeroMQ security"
+section "ZeroMQ security and the storage token"
 for platform in android ios; do
   scenario "$platform"
-  RETHINKDB_PORT_28015_TCP=""
   run_entrypoint
-  check "${platform}: STF starts without RethinkDB" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
-  check_not_contains "${platform}: RethinkDB is not awaited without it" "rethink-host" "$(calls socat)"
+  check "${platform}: the CURVE keys and the storage token start STF" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
+  stf_env="$(calls env)"
+  check_contains "${platform}: STF gets the public key of the server" "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$stf_env"
+  check_contains "${platform}: STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$stf_env"
+  check_contains "${platform}: STF gets the storage token" "STF_STORAGE_TOKEN=storage-token" "$stf_env"
+  check_not_contains "${platform}: the secret key is not logged" "$secret_key" "$OUT"
+  check_not_contains "${platform}: the storage token is not logged" "storage-token" "$OUT"
+
+  for var in STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+    scenario "$platform"
+    unset "$var"
+    run_entrypoint
+    check_contains "${platform}: a missing ${var} is a configuration error" "${var} is required but empty or unset." "$OUT"
+    check "${platform}: nothing is started without ${var}" "0:" "${STATUS}:$(calls socat)$(started)"
+  done
 done
-scenario
-run_entrypoint
-check_contains "RethinkDB is awaited when it is set (the STF images before the current one)" "TCP:rethink-host:28015" \
-  "$(calls socat)"
-check_contains "ZeroMQ without CURVE is reported" "ZeroMQ without CURVE" "$OUT"
-
-server_key="$(printf '%064d' 0 | tr 0 a)"
-secret_key="$(printf '%064d' 0 | tr 0 b)"
-scenario ios
-export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="$secret_key"
-run_entrypoint
-check "the CURVE keys start STF" "0" "$STATUS"
-check_contains "STF gets the public key of the server" "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$(calls env)"
-check_contains "STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$(calls env)"
-check_contains "ZeroMQ with CURVE is reported" "ZeroMQ with CURVE" "$OUT"
-check_not_contains "the secret key is not logged" "$secret_key" "$OUT"
 
 scenario
-export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key"
-run_entrypoint
-check_contains "one CURVE key without the other is reported" "are set together" "$OUT"
-check "nothing is started with one CURVE key" "0:" "${STATUS}:$(started)"
-
-scenario
-export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="not-a-key-${secret_key}"
+export STF_ZMQ_CURVE_SECRET_KEY="not-a-key-${secret_key}"
 run_entrypoint
 check_contains "an invalid CURVE key is reported" "STF_ZMQ_CURVE_SECRET_KEY must be a key of 64 hex characters" "$OUT"
 check_not_contains "the invalid secret key is not logged" "not-a-key" "$OUT"
@@ -459,7 +455,6 @@ check_contains "the provider gets STF_PROVIDER_* as its options" "STF_PROVIDER_M
 check_contains "the provider gets STF_PROVIDER_NAME" "STF_PROVIDER_NAME=mcloud-linux" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: app" "STF_PROVIDER_CONNECT_APP_DEALER=<unset>" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: dev" "STF_PROVIDER_CONNECT_DEV_DEALER=<unset>" "$stf_env"
-check_contains "STORAGE_TOKEN is not set without STF_STORAGE_TOKEN" "STORAGE_TOKEN=<unset>" "$stf_env"
 
 scenario
 STF_PROVIDER_NAME=""
@@ -481,17 +476,6 @@ PUBLIC_IP_PORT=443
 run_entrypoint
 check_contains "https: the storage URL" "--storage-url|https://stf.example.com:443/" "$(started)"
 check_contains "https: the screen WebSocket is wss" "--screen-ws-url-pattern|wss://stf.example.com:443/d/" "$(started)"
-
-scenario
-STF_STORAGE_TOKEN=secret-token
-run_entrypoint
-check_contains "STF_STORAGE_TOKEN is passed as STORAGE_TOKEN" "STORAGE_TOKEN=secret-token" "$(calls env)"
-check_not_contains "the token is not logged" "secret-token" "$OUT"
-
-scenario
-export STORAGE_TOKEN=direct-token
-run_entrypoint
-check_contains "STORAGE_TOKEN is kept without STF_STORAGE_TOKEN" "STORAGE_TOKEN=direct-token" "$(calls env)"
 
 section "STF of iOS"
 scenario ios
