@@ -99,6 +99,13 @@ if [[ "$STF_PROVIDER_MIN_PORT" =~ ^[0-9]+$ && "$STF_PROVIDER_MAX_PORT" =~ ^[0-9]
   ((STF_PROVIDER_MIN_PORT > STF_PROVIDER_MAX_PORT)); then
   configError "STF_PROVIDER_MIN_PORT (${STF_PROVIDER_MIN_PORT}) must not be greater than STF_PROVIDER_MAX_PORT (${STF_PROVIDER_MAX_PORT})."
 fi
+# Android: the fixed adb connect port of the device, the provider reads it as --connect-port; iOS ignores it
+if [[ "$PLATFORM_NAME" == "android" && -n "$STF_PROVIDER_CONNECT_PORT" ]]; then
+  if [[ ! "$STF_PROVIDER_CONNECT_PORT" =~ ^[1-9][0-9]{3,4}$ ]] ||
+    ((STF_PROVIDER_CONNECT_PORT < 1024 || STF_PROVIDER_CONNECT_PORT > 65535)); then
+    configError "STF_PROVIDER_CONNECT_PORT must be a port 1024-65535, but it is '${STF_PROVIDER_CONNECT_PORT}'."
+  fi
+fi
 if [[ -n "$REMOTE_CONNECT_HOST" && ! "$REMOTE_CONNECT_HOST" =~ ^[^:/[:space:]]+$ ]]; then
   configError "REMOTE_CONNECT_HOST must be a host name or address without a scheme and a port, but it is '${REMOTE_CONNECT_HOST}'."
 fi

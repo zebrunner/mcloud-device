@@ -64,7 +64,7 @@ exit 0'
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STF_STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
-  STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+  STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -96,6 +96,7 @@ scenario() {
   export STF_PROVIDER_NAME=mcloud-linux STF_PROVIDER_HOST=provider-host STF_PROVIDER_DEVICE_NAME="My Phone"
   export REMOTE_CONNECT_HOST=""
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
+  export STF_PROVIDER_CONNECT_PORT=""
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=false STF_PROVIDER_GROUP_TIMEOUT=3600
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
   export STF_PROVIDER_SCREEN_JPEG_QUALITY=30 STF_PROVIDER_SCREEN_PING_INTERVAL=30000 STF_PROVIDER_SCREEN_RESET=false
@@ -244,6 +245,27 @@ scenario
 USBMUXD_SOCKET_ADDRESS=""
 run_entrypoint
 check_not_contains "Android: USBMUXD_SOCKET_ADDRESS is not needed" "USBMUXD_SOCKET_ADDRESS must be" "$OUT"
+
+for value in abc 80 1023 65536 99999 07400 0x1F90 "7400 " -7400; do
+  scenario
+  STF_PROVIDER_CONNECT_PORT="$value"
+  run_entrypoint
+  check_contains "Android: STF_PROVIDER_CONNECT_PORT='${value}' is reported" \
+    "STF_PROVIDER_CONNECT_PORT must be a port 1024-65535, but it is '${value}'." "$OUT"
+  check "Android: STF_PROVIDER_CONNECT_PORT='${value}' exits with 0" "0" "$STATUS"
+  check "Android: nothing is started with STF_PROVIDER_CONNECT_PORT='${value}'" "" "$(calls socat)$(started)"
+done
+for value in 1024 7400 65535; do
+  scenario
+  STF_PROVIDER_CONNECT_PORT="$value"
+  run_entrypoint
+  check_not_contains "Android: STF_PROVIDER_CONNECT_PORT='${value}' is valid" "STF_PROVIDER_CONNECT_PORT must be" "$OUT"
+done
+scenario ios
+STF_PROVIDER_CONNECT_PORT=abc
+run_entrypoint
+check_not_contains "iOS: STF_PROVIDER_CONNECT_PORT is ignored" "STF_PROVIDER_CONNECT_PORT must be" "$OUT"
+check_contains "iOS: STF starts with any STF_PROVIDER_CONNECT_PORT" "ios-device" "$(started)"
 
 for value in "tcp://mcloud.example.com" "mcloud.example.com:5555" "mcloud.example.com/" "mcloud example.com"; do
   scenario
@@ -472,6 +494,8 @@ check_contains "the provider gets STF_PROVIDER_* as its options" "STF_PROVIDER_M
 check_contains "the provider gets STF_PROVIDER_NAME" "STF_PROVIDER_NAME=mcloud-linux" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: app" "STF_PROVIDER_CONNECT_APP_DEALER=<unset>" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: dev" "STF_PROVIDER_CONNECT_DEV_DEALER=<unset>" "$stf_env"
+check_contains "an empty STF_PROVIDER_CONNECT_PORT is removed: the second port of the range" \
+  "STF_PROVIDER_CONNECT_PORT=<unset>" "$stf_env"
 
 scenario
 STF_PROVIDER_NAME=""
@@ -486,6 +510,12 @@ STF_PROVIDER_PUBLIC_IP=10.0.0.1
 run_entrypoint
 check_contains "STF_PROVIDER_HOST is STF_PROVIDER_PUBLIC_IP by default" "--connect-url-pattern|10.0.0.1:<%= publicPort %>" "$(started)"
 check_contains "the provider gets the default STF_PROVIDER_HOST" "STF_PROVIDER_HOST=10.0.0.1" "$(calls env)"
+
+scenario
+STF_PROVIDER_CONNECT_PORT=7400
+run_entrypoint
+check_contains "the provider gets STF_PROVIDER_CONNECT_PORT as its --connect-port" "STF_PROVIDER_CONNECT_PORT=7400" "$(calls env)"
+check_not_contains "STF_PROVIDER_CONNECT_PORT is not passed twice" "--connect-port" "$(started)"
 
 scenario
 unset REMOTE_CONNECT_HOST
@@ -524,6 +554,12 @@ check_contains "iOS: REMOTE_CONNECT_HOST is the host of the adb connect URL" \
 check_contains "iOS: the screen WebSocket keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" \
   "--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/" "$(started)"
 check_contains "iOS: --host keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" "--host|provider-host|" "$(started)"
+
+scenario ios
+STF_PROVIDER_CONNECT_PORT=7400
+run_entrypoint
+check_contains "iOS: --connect-port stays MJPEG_PORT with STF_PROVIDER_CONNECT_PORT" "--connect-port|8101|" "$(started)"
+check_not_contains "iOS: STF_PROVIDER_CONNECT_PORT is not an option" "7400" "$(started)"
 
 scenario ios
 STF_PROVIDER_DEVICE_NAME=""

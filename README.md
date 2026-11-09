@@ -58,7 +58,7 @@ docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<ud
 
 ## Configuration
 
-Every variable has its default in the `Dockerfile`. The entrypoint validates the configuration before anything starts: every invalid variable is logged, then it exits with `0`. The numeric variables of the table must be non-negative integers, `STF_PROVIDER_MIN_PORT` must not be greater than `STF_PROVIDER_MAX_PORT`.
+Every variable has its default in the `Dockerfile`. The entrypoint validates the configuration before anything starts: every invalid variable is logged, then it exits with `0`. The numeric variables of the table must be non-negative integers, `STF_PROVIDER_MIN_PORT` must not be greater than `STF_PROVIDER_MAX_PORT`, a set `STF_PROVIDER_CONNECT_PORT` of Android must be a port `1024`-`65535`.
 
 ### Device
 
@@ -105,6 +105,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `STF_PROVIDER_ADB_PORT` | `5037` | Android: the port of the adb server. |
 | `STF_PROVIDER_MIN_PORT` | `7404` | The first port of the device: the screen WebSocket. |
 | `STF_PROVIDER_MAX_PORT` | `7410` | The last port of the device. |
+| `STF_PROVIDER_CONNECT_PORT` | empty | Android: the fixed remote debug port of the device (`adb connect <host>:<port>`, `--connect-port` of the provider), `1024`-`65535`; empty: the second port of `STF_PROVIDER_MIN_PORT`..`STF_PROVIDER_MAX_PORT`. mcloud-agent sets it from the `connect_port` setting of the device and publishes the port. Needs an STF image with the `--connect-port` option of `stf provider`: the provider of an older one stops on the unknown option. iOS ignores it (`--connect-port` of `stf ios-device` is `MJPEG_PORT`). |
 | `STF_PROVIDER_BOOT_COMPLETE_TIMEOUT` | `60000` | How long in milliseconds to wait for the boot of the device. |
 | `STF_PROVIDER_CLEANUP` | `false` | Android: reset the device between the uses (uninstall the applications, reset the accounts). |
 | `STF_PROVIDER_GROUP_TIMEOUT` | `3600` | The timeout in seconds of the automatic release of an inactive device. |
