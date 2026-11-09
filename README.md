@@ -98,8 +98,9 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | Variable | Default | Description |
 | --- | --- | --- |
 | `STF_PROVIDER_NAME` | empty | The name of the provider in STF, required for iOS; for Android the hostname of the container by default. |
-| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the screen WebSocket path and the `adb connect` URL unless `REMOTE_CONNECT_HOST` is set. |
+| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the screen WebSocket path and the `adb connect` URL unless `REMOTE_CONNECT_HOST` is set. With `STF_NODE_TOKEN` it must be the address of the node invite (`./zebrunner.sh node-invite` of mcloud): otherwise the devices are not bound to the node and STF rejects their registration. |
 | `REMOTE_CONNECT_HOST` | `STF_PROVIDER_HOST` | The host the users run `adb connect <host>:<port>` with (the remote debug of STF, `--connect-url-pattern`), a host name or address without a scheme and a port. With the adb relay of mcloud (`ADB_RELAY_HOSTS`: the device hosts in a private LAN, their device ports forwarded by the MCloud server) it is the public name of MCloud. Not an option of the provider (not `STF_PROVIDER_*`). |
+| `STF_NODE_TOKEN` | empty | The node token of an enrolled device host (`mcn1.<label>.<secret>`, `./zebrunner.sh join` of mcloud-agent, which also passes it as `STF_STORAGE_TOKEN`): the provider (and its device processes) and `stf ios-device` prove with an HMAC of it that their devices belong to the node ([node enrollment of STF](https://github.com/zebrunner/stf/pull/1124)). Empty: no node binding, the legacy setup with the shared secrets. A secret: passed to STF in its environment, neither logged nor traced by `VERBOSE=true`. Not an option of the provider (not `STF_PROVIDER_*`). |
 | `STF_PROVIDER_DEVICE_NAME` | empty | The name of the device in STF. |
 | `STF_PROVIDER_ADB_HOST` | `connector` | Android: the adb server of the connector container. |
 | `STF_PROVIDER_ADB_PORT` | `5037` | Android: the port of the adb server. |
@@ -142,7 +143,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `LOGGER_LEVEL` | `INFO` | The minimum level of the entrypoint logs: `DEBUG`, `INFO`, `WARN` or `ERROR`. |
 | `DEBUG` | `false` | `true` keeps the container alive for `DEBUG_TIMEOUT` seconds after the entrypoint exits. |
 | `DEBUG_TIMEOUT` | `3600` | The pause of the debug mode in seconds. |
-| `VERBOSE` | `false` | `true` traces the commands of the entrypoint (`set -x`). |
+| `VERBOSE` | `false` | `true` traces the commands of the entrypoint (`set -x`), but the checks of the secrets (`STF_STORAGE_TOKEN`, the CURVE keys): their values are not traced. |
 
 ## Startup
 

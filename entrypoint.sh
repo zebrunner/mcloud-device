@@ -28,6 +28,31 @@ isTcpReachable() {
   timeout 10 socat -u OPEN:/dev/null "TCP:$1:$2" > /dev/null 2>&1
 }
 
+# untraced <command...>: runs a command that reads the secrets without the trace of VERBOSE=true (set -x)
+untraced() {
+  { set +x; } 2> /dev/null
+  "$@"
+  local status=$?
+  [[ "$VERBOSE" == "true" ]] && set -x
+  return "$status"
+}
+
+# validateSecrets: the required variables (requiredVars, stfServices) and the CURVE keys, run untraced (secrets)
+# it is called by untraced
+# shellcheck disable=SC2329
+validateSecrets() {
+  for var in "${requiredVars[@]}" "${stfServices[@]}"; do
+    if [[ -z "${!var}" ]]; then
+      configError "${var} is required but empty or unset."
+    fi
+  done
+  for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+    if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+      configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
+    fi
+  done
+}
+
 # isWdaUp: WebDriverAgent answers its status
 isWdaUp() {
   curl -sf --max-time 5 -o /dev/null "$wdaStatusUrl"
@@ -62,7 +87,8 @@ if [[ ! "$WIRELESS" =~ ^(true|false)$ ]]; then
   configError "WIRELESS must be true or false, but it is '${WIRELESS}'."
 fi
 
-# the token of the STF storage and the CURVE keys of ZeroMQ are read by STF itself (the values are not logged)
+# the token of the STF storage, the CURVE keys of ZeroMQ and the node token (STF_NODE_TOKEN, optional) are read by STF
+# itself, the provider and its device processes inherit them: the values are neither logged nor traced
 requiredVars=(STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
 # the STF services of tcp://<host>:<port>, they are awaited before the start
 stfServices=(STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB)
@@ -70,16 +96,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
   requiredVars+=(DEVICE_UDID STF_PROVIDER_NAME)
   stfServices+=(STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER)
 fi
-for var in "${requiredVars[@]}" "${stfServices[@]}"; do
-  if [[ -z "${!var}" ]]; then
-    configError "${var} is required but empty or unset."
-  fi
-done
-for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
-  if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
-    configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
-  fi
-done
+untraced validateSecrets
 for var in "${stfServices[@]}"; do
   if [[ -n "${!var}" ]] && ! parseTcpUrl "${!var}"; then
     configError "${var} must be tcp://<host>:<port>, but it is '${!var}'."
