@@ -1,5 +1,5 @@
 # check=skip=SecretsUsedInArgOrEnv
-# STF_STORAGE_TOKEN and the STF_ZMQ_CURVE_* keys are declared empty as documentation of the supported env vars; the real
+# STF_NODE_TOKEN and the STF_ZMQ_CURVE_* keys are declared empty as documentation of the supported env vars; the real
 # values are passed at runtime
 
 # The tools of the image do not depend on the STF base image, which drops them (zebrunner/stf#1052).
@@ -73,7 +73,7 @@ ENV \
     STF_PROVIDER_CONNECT_SUB="" \
     STF_PROVIDER_CONNECT_APP_DEALER="" \
     STF_PROVIDER_CONNECT_DEV_DEALER="" \
-    STF_STORAGE_TOKEN="" \
+    STF_NODE_TOKEN="" \
     STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="" \
     STF_ZMQ_CURVE_SECRET_KEY="" \
     STF_SERVICES_WAIT_TIMEOUT=300 \
@@ -86,11 +86,13 @@ ENV \
     # STF provider
     STF_PROVIDER_NAME="" \
     STF_PROVIDER_HOST="" \
+    REMOTE_CONNECT_HOST="" \
     STF_PROVIDER_DEVICE_NAME="" \
     STF_PROVIDER_ADB_HOST=connector \
     STF_PROVIDER_ADB_PORT=5037 \
     STF_PROVIDER_MIN_PORT=7404 \
     STF_PROVIDER_MAX_PORT=7410 \
+    STF_PROVIDER_CONNECT_PORT="" \
     STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 \
     STF_PROVIDER_CLEANUP=false \
     STF_PROVIDER_GROUP_TIMEOUT=3600 \

@@ -11,10 +11,12 @@ PLATFORM="${PLATFORM:-linux/amd64}"
 PREFIX="mcloud-device-test-$$"
 NETWORK="${PREFIX}-net"
 SERVICES="${PREFIX}-services"
-# the token of the STF storage and the CURVE keys of ZeroMQ (64 hex characters), required by the entrypoint
+# the node token (mcn1.<label>.<43 base64url characters>) and the CURVE keys of ZeroMQ (64 hex characters), required
+# by the entrypoint
 SERVER_KEY="$(printf '%064d' 0 | tr 0 a)"
 SECRET_KEY="$(printf '%064d' 0 | tr 0 b)"
-SECRETS=(--env STF_STORAGE_TOKEN=storage-token --env "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${SERVER_KEY}")
+NODE_TOKEN="mcn1.node-1.$(printf '%043d' 0 | tr 0 c)"
+SECRETS=(--env "STF_NODE_TOKEN=${NODE_TOKEN}" --env "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${SERVER_KEY}")
 SECRETS+=(--env "STF_ZMQ_CURVE_SECRET_KEY=${SECRET_KEY}")
 
 require_cmd docker
@@ -129,7 +131,7 @@ validation="$(docker run --rm --platform "$PLATFORM" "$IMAGE" 2>&1)"
 status=$?
 check_contains "banner" "MCLOUD-DEVICE" "$validation"
 check_contains "the STF services are required" "STF_PROVIDER_CONNECT_PUSH is required but empty or unset." "$validation"
-for var in STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+for var in STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   check_contains "${var} is required" "${var} is required but empty or unset." "$validation"
 done
 check_contains "invalid configuration ends the entrypoint" "Invalid configuration. Exiting!" "$validation"

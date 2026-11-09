@@ -63,8 +63,8 @@ exit 0'
 # the stub body is expanded when the stub runs
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
-for var in STF_STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
-  STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
+  STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -78,6 +78,9 @@ exit "${FAKE_STF_EXIT:-0}"'
 # the CURVE keys of the scenarios, 64 hex characters
 server_key="$(printf '%064d' 0 | tr 0 a)"
 secret_key="$(printf '%064d' 0 | tr 0 b)"
+# the node token of mcloud-agent ./zebrunner.sh join: mcn1.<label>.<43 base64url characters>
+node_secret="Ab_-$(printf '%039d' 0 | tr 0 c)"
+node_token="mcn1.agent-1.${node_secret}"
 
 # scenario <platform>: a fresh state, an Android (by default) or an iOS device with reachable STF services
 scenario() {
@@ -89,12 +92,14 @@ scenario() {
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
   export STF_PROVIDER_CONNECT_APP_DEALER=tcp://app-host:7160 STF_PROVIDER_CONNECT_DEV_DEALER=tcp://dev-host:7260
-  export STF_STORAGE_TOKEN=storage-token
+  export STF_NODE_TOKEN="$node_token"
   export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="$secret_key"
   export STF_SERVICES_WAIT_TIMEOUT=300 STF_SERVICES_WAIT_RETRY=30 STF_SERVICES_WAIT_RESTARTS=2
   export STF_PROVIDER_PUBLIC_IP=stf.example.com PUBLIC_IP_PORT=80 PUBLIC_IP_PROTOCOL=http
   export STF_PROVIDER_NAME=mcloud-linux STF_PROVIDER_HOST=provider-host STF_PROVIDER_DEVICE_NAME="My Phone"
+  export REMOTE_CONNECT_HOST=""
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
+  export STF_PROVIDER_CONNECT_PORT=""
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=false STF_PROVIDER_GROUP_TIMEOUT=3600
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
   export STF_PROVIDER_SCREEN_JPEG_QUALITY=30 STF_PROVIDER_SCREEN_PING_INTERVAL=30000 STF_PROVIDER_SCREEN_RESET=false
@@ -129,7 +134,7 @@ check "valid configuration starts STF" "0" "$STATUS"
 check_contains "banner" "MCLOUD-DEVICE" "$OUT"
 check_not_contains "valid configuration is not reported" "Invalid configuration" "$OUT"
 
-for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN \
+for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN \
   STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   scenario
   export "${var}="
@@ -243,6 +248,43 @@ scenario
 USBMUXD_SOCKET_ADDRESS=""
 run_entrypoint
 check_not_contains "Android: USBMUXD_SOCKET_ADDRESS is not needed" "USBMUXD_SOCKET_ADDRESS must be" "$OUT"
+
+for value in abc 80 1023 65536 99999 07400 0x1F90 "7400 " -7400; do
+  scenario
+  STF_PROVIDER_CONNECT_PORT="$value"
+  run_entrypoint
+  check_contains "Android: STF_PROVIDER_CONNECT_PORT='${value}' is reported" \
+    "STF_PROVIDER_CONNECT_PORT must be a port 1024-65535, but it is '${value}'." "$OUT"
+  check "Android: STF_PROVIDER_CONNECT_PORT='${value}' exits with 0" "0" "$STATUS"
+  check "Android: nothing is started with STF_PROVIDER_CONNECT_PORT='${value}'" "" "$(calls socat)$(started)"
+done
+for value in 1024 7400 65535; do
+  scenario
+  STF_PROVIDER_CONNECT_PORT="$value"
+  run_entrypoint
+  check_not_contains "Android: STF_PROVIDER_CONNECT_PORT='${value}' is valid" "STF_PROVIDER_CONNECT_PORT must be" "$OUT"
+done
+scenario ios
+STF_PROVIDER_CONNECT_PORT=abc
+run_entrypoint
+check_not_contains "iOS: STF_PROVIDER_CONNECT_PORT is ignored" "STF_PROVIDER_CONNECT_PORT must be" "$OUT"
+check_contains "iOS: STF starts with any STF_PROVIDER_CONNECT_PORT" "ios-device" "$(started)"
+
+for value in "tcp://mcloud.example.com" "mcloud.example.com:5555" "mcloud.example.com/" "mcloud example.com"; do
+  scenario
+  REMOTE_CONNECT_HOST="$value"
+  run_entrypoint
+  check_contains "REMOTE_CONNECT_HOST='${value}' is reported" \
+    "REMOTE_CONNECT_HOST must be a host name or address without a scheme and a port, but it is '${value}'." "$OUT"
+  check "REMOTE_CONNECT_HOST='${value}' exits with 0" "0" "$STATUS"
+  check "nothing is started with REMOTE_CONNECT_HOST='${value}'" "" "$(calls socat)$(started)"
+done
+for value in mcloud.example.com 203.0.113.10; do
+  scenario
+  REMOTE_CONNECT_HOST="$value"
+  run_entrypoint
+  check_not_contains "REMOTE_CONNECT_HOST='${value}' is valid" "REMOTE_CONNECT_HOST must be" "$OUT"
+done
 
 scenario
 STF_PROVIDER_CONNECT_PUSH=""
@@ -416,26 +458,63 @@ broadcasts="$(calls websocat | wc -l)"
 /bin/sleep 0.5
 check "websocat is not started again after the entrypoint" "$broadcasts" "$(calls websocat | wc -l)"
 
-section "ZeroMQ security and the storage token"
+section "ZeroMQ security and the node token"
 for platform in android ios; do
-  scenario "$platform"
-  run_entrypoint
-  check "${platform}: the CURVE keys and the storage token start STF" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
-  stf_env="$(calls env)"
-  check_contains "${platform}: STF gets the public key of the server" "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$stf_env"
-  check_contains "${platform}: STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$stf_env"
-  check_contains "${platform}: STF gets the storage token" "STF_STORAGE_TOKEN=storage-token" "$stf_env"
-  check_not_contains "${platform}: the secret key is not logged" "$secret_key" "$OUT"
-  check_not_contains "${platform}: the storage token is not logged" "storage-token" "$OUT"
+  for verbose in false true; do
+    scenario "$platform"
+    export VERBOSE="$verbose"
+    run_entrypoint
+    check "${platform}, VERBOSE=${verbose}: the CURVE keys and the node token start STF" "0:yes" \
+      "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
+    stf_env="$(calls env)"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the public key of the server" \
+      "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the node token" "STF_NODE_TOKEN=${node_token}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF is started" "Starting STF ${platform}" "$OUT"
+    check_not_contains "${platform}, VERBOSE=${verbose}: the secret key is not logged" "$secret_key" "$OUT"
+    check_not_contains "${platform}, VERBOSE=${verbose}: the node token is not logged" "$node_secret" "$OUT"
+    [[ "$verbose" == true ]] && check_contains "${platform}: VERBOSE=true traces the entrypoint" "+ untraced validateSecrets" "$OUT"
+  done
 
-  for var in STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+  for var in STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
     scenario "$platform"
     unset "$var"
     run_entrypoint
     check_contains "${platform}: a missing ${var} is a configuration error" "${var} is required but empty or unset." "$OUT"
     check "${platform}: nothing is started without ${var}" "0:" "${STATUS}:$(calls socat)$(started)"
   done
+
+  # a wrong prefix, an upper case or too long label, a short or long secret, a character out of base64url, no label
+  for value in "mcn2.agent-1.${node_secret}" "mcn1.Agent-1.${node_secret}" "mcn1.-agent.${node_secret}" \
+    "mcn1.$(printf '%041d' 0 | tr 0 a).${node_secret}" "mcn1.agent-1.${node_secret%?}" "mcn1.agent-1.${node_secret}c" \
+    "mcn1.agent-1.${node_secret%?}=" "mcn1..${node_secret}" "mcn1.agent-1.${node_secret} " "${node_secret}"; do
+    for verbose in false true; do
+      scenario "$platform"
+      export STF_NODE_TOKEN="$value" VERBOSE="$verbose"
+      run_entrypoint
+      check_contains "${platform}, VERBOSE=${verbose}: the node token '${value:0:20}...' is reported" \
+        "STF_NODE_TOKEN must be a node token mcn1.<label>.<secret> (./zebrunner.sh join of mcloud-agent)." "$OUT"
+      check "${platform}, VERBOSE=${verbose}: an invalid node token exits with 0 and starts nothing" "0:" \
+        "${STATUS}:$(calls socat)$(started)"
+      check_not_contains "${platform}, VERBOSE=${verbose}: the invalid node token is not logged" "${node_secret:4:30}" "$OUT"
+    done
+  done
+  for value in "mcn1.a.${node_secret}" "mcn1.$(printf '%040d' 0 | tr 0 a).${node_secret}" "mcn1.0-node-.${node_secret}"; do
+    scenario "$platform"
+    export STF_NODE_TOKEN="$value"
+    run_entrypoint
+    check_not_contains "${platform}: the node token '${value:0:20}...' is valid" "STF_NODE_TOKEN must be" "$OUT"
+  done
 done
+
+scenario
+export VERBOSE=true
+STF_NODE_TOKEN=""
+run_entrypoint
+check_contains "VERBOSE=true: the untraced checks still report" "STF_NODE_TOKEN is required but empty or unset." "$OUT"
+check_contains "VERBOSE=true: the trace goes on after the untraced checks" "+ untraced validateSecrets" "$OUT"
+check_contains "VERBOSE=true: the commands after the secrets are traced" "+ [[ ! 7404 =~" "$OUT"
 
 scenario
 export STF_ZMQ_CURVE_SECRET_KEY="not-a-key-${secret_key}"
@@ -455,6 +534,8 @@ check_contains "the provider gets STF_PROVIDER_* as its options" "STF_PROVIDER_M
 check_contains "the provider gets STF_PROVIDER_NAME" "STF_PROVIDER_NAME=mcloud-linux" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: app" "STF_PROVIDER_CONNECT_APP_DEALER=<unset>" "$stf_env"
 check_contains "the dealers of iOS are removed for the provider: dev" "STF_PROVIDER_CONNECT_DEV_DEALER=<unset>" "$stf_env"
+check_contains "an empty STF_PROVIDER_CONNECT_PORT is removed: the second port of the range" \
+  "STF_PROVIDER_CONNECT_PORT=<unset>" "$stf_env"
 
 scenario
 STF_PROVIDER_NAME=""
@@ -471,6 +552,27 @@ check_contains "STF_PROVIDER_HOST is STF_PROVIDER_PUBLIC_IP by default" "--conne
 check_contains "the provider gets the default STF_PROVIDER_HOST" "STF_PROVIDER_HOST=10.0.0.1" "$(calls env)"
 
 scenario
+STF_PROVIDER_CONNECT_PORT=7400
+run_entrypoint
+check_contains "the provider gets STF_PROVIDER_CONNECT_PORT as its --connect-port" "STF_PROVIDER_CONNECT_PORT=7400" "$(calls env)"
+check_not_contains "STF_PROVIDER_CONNECT_PORT is not passed twice" "--connect-port" "$(started)"
+
+scenario
+unset REMOTE_CONNECT_HOST
+run_entrypoint
+check_contains "the adb connect URL is STF_PROVIDER_HOST without REMOTE_CONNECT_HOST" \
+  "--connect-url-pattern|provider-host:<%= publicPort %>|" "$(started)"
+
+scenario
+REMOTE_CONNECT_HOST=mcloud.example.com
+run_entrypoint
+check_contains "REMOTE_CONNECT_HOST is the host of the adb connect URL" \
+  "--connect-url-pattern|mcloud.example.com:<%= publicPort %>|" "$(started)"
+check_contains "the screen WebSocket keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" \
+  "--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/<%= serial %>/<%= publicPort %>/" "$(started)"
+check_contains "the provider keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" "STF_PROVIDER_HOST=provider-host" "$(calls env)"
+
+scenario
 PUBLIC_IP_PROTOCOL=HTTPS
 PUBLIC_IP_PORT=443
 run_entrypoint
@@ -483,6 +585,21 @@ run_entrypoint
 check "the ios-device options" \
   "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100" \
   "$(started)"
+
+scenario ios
+REMOTE_CONNECT_HOST=mcloud.example.com
+run_entrypoint
+check_contains "iOS: REMOTE_CONNECT_HOST is the host of the adb connect URL" \
+  "--connect-url-pattern|mcloud.example.com:<%= publicPort %>|" "$(started)"
+check_contains "iOS: the screen WebSocket keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" \
+  "--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/" "$(started)"
+check_contains "iOS: --host keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" "--host|provider-host|" "$(started)"
+
+scenario ios
+STF_PROVIDER_CONNECT_PORT=7400
+run_entrypoint
+check_contains "iOS: --connect-port stays MJPEG_PORT with STF_PROVIDER_CONNECT_PORT" "--connect-port|8101|" "$(started)"
+check_not_contains "iOS: STF_PROVIDER_CONNECT_PORT is not an option" "7400" "$(started)"
 
 scenario ios
 STF_PROVIDER_DEVICE_NAME=""

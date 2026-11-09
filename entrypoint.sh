@@ -28,6 +28,35 @@ isTcpReachable() {
   timeout 10 socat -u OPEN:/dev/null "TCP:$1:$2" > /dev/null 2>&1
 }
 
+# untraced <command...>: runs a command that reads the secrets without the trace of VERBOSE=true (set -x)
+untraced() {
+  { set +x; } 2> /dev/null
+  "$@"
+  local status=$?
+  [[ "$VERBOSE" == "true" ]] && set -x
+  return "$status"
+}
+
+# validateSecrets: the required variables (requiredVars, stfServices), the node token and the CURVE keys, run untraced
+# (secrets); the errors do not show the values
+# it is called by untraced
+# shellcheck disable=SC2329
+validateSecrets() {
+  for var in "${requiredVars[@]}" "${stfServices[@]}"; do
+    if [[ -z "${!var}" ]]; then
+      configError "${var} is required but empty or unset."
+    fi
+  done
+  if [[ -n "$STF_NODE_TOKEN" && ! "$STF_NODE_TOKEN" =~ $nodeTokenPattern ]]; then
+    configError "STF_NODE_TOKEN must be a node token mcn1.<label>.<secret> (./zebrunner.sh join of mcloud-agent)."
+  fi
+  for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+    if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
+      configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
+    fi
+  done
+}
+
 # isWdaUp: WebDriverAgent answers its status
 isWdaUp() {
   curl -sf --max-time 5 -o /dev/null "$wdaStatusUrl"
@@ -40,6 +69,9 @@ PUBLIC_IP_PROTOCOL="${PUBLIC_IP_PROTOCOL,,}"
 WIRELESS="${WIRELESS,,}"
 # The provider of Android reads STF_PROVIDER_HOST as its --host option, the public address is its default
 export STF_PROVIDER_HOST="${STF_PROVIDER_HOST:-$STF_PROVIDER_PUBLIC_IP}"
+# The adb connect URL of the remote debug: REMOTE_CONNECT_HOST (e.g. the adb relay of the MCloud server for the device
+# hosts of a private LAN), STF_PROVIDER_HOST by default. Not an STF_PROVIDER_* name: the provider would read it as its option
+connectUrlPattern="${REMOTE_CONNECT_HOST:-$STF_PROVIDER_HOST}:<%= publicPort %>"
 wdaStatusUrl="http://${WDA_HOST}:${WDA_PORT}/status"
 # The usbmuxd socket of /var/run/usbmuxd (a symlink to it, see Dockerfile)
 usbmuxdSocket="/tmp/usbmuxd/usbmuxd"
@@ -59,24 +91,20 @@ if [[ ! "$WIRELESS" =~ ^(true|false)$ ]]; then
   configError "WIRELESS must be true or false, but it is '${WIRELESS}'."
 fi
 
-# the token of the STF storage and the CURVE keys of ZeroMQ are read by STF itself (the values are not logged)
-requiredVars=(STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
+# the node token (the device binding and the storage) and the CURVE keys of ZeroMQ are read by STF itself, the provider
+# and its device processes inherit them: the values are neither logged nor traced
+requiredVars=(STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
+# the node token of mcloud-agent ./zebrunner.sh join (zebrunner/stf lib/util/zebrunner-nodes.ts): the secret is 32 bytes
+# in base64url
+nodeTokenPattern='^mcn1\.[a-z0-9][a-z0-9-]{0,39}\.[A-Za-z0-9_-]{43}$'
+
 # the STF services of tcp://<host>:<port>, they are awaited before the start
 stfServices=(STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB)
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   requiredVars+=(DEVICE_UDID STF_PROVIDER_NAME)
   stfServices+=(STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER)
 fi
-for var in "${requiredVars[@]}" "${stfServices[@]}"; do
-  if [[ -z "${!var}" ]]; then
-    configError "${var} is required but empty or unset."
-  fi
-done
-for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
-  if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
-    configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
-  fi
-done
+untraced validateSecrets
 for var in "${stfServices[@]}"; do
   if [[ -n "${!var}" ]] && ! parseTcpUrl "${!var}"; then
     configError "${var} must be tcp://<host>:<port>, but it is '${!var}'."
@@ -95,6 +123,16 @@ done
 if [[ "$STF_PROVIDER_MIN_PORT" =~ ^[0-9]+$ && "$STF_PROVIDER_MAX_PORT" =~ ^[0-9]+$ ]] &&
   ((STF_PROVIDER_MIN_PORT > STF_PROVIDER_MAX_PORT)); then
   configError "STF_PROVIDER_MIN_PORT (${STF_PROVIDER_MIN_PORT}) must not be greater than STF_PROVIDER_MAX_PORT (${STF_PROVIDER_MAX_PORT})."
+fi
+# Android: the fixed adb connect port of the device, the provider reads it as --connect-port; iOS ignores it
+if [[ "$PLATFORM_NAME" == "android" && -n "$STF_PROVIDER_CONNECT_PORT" ]]; then
+  if [[ ! "$STF_PROVIDER_CONNECT_PORT" =~ ^[1-9][0-9]{3,4}$ ]] ||
+    ((STF_PROVIDER_CONNECT_PORT < 1024 || STF_PROVIDER_CONNECT_PORT > 65535)); then
+    configError "STF_PROVIDER_CONNECT_PORT must be a port 1024-65535, but it is '${STF_PROVIDER_CONNECT_PORT}'."
+  fi
+fi
+if [[ -n "$REMOTE_CONNECT_HOST" && ! "$REMOTE_CONNECT_HOST" =~ ^[^:/[:space:]]+$ ]]; then
+  configError "REMOTE_CONNECT_HOST must be a host name or address without a scheme and a port, but it is '${REMOTE_CONNECT_HOST}'."
 fi
 if [[ "$PLATFORM_NAME" == "ios" && "$WIRELESS" != "true" && ! "$USBMUXD_SOCKET_ADDRESS" =~ ^[^:]+:[0-9]+$ ]]; then
   configError "USBMUXD_SOCKET_ADDRESS must be <host>:<port>, but it is '${USBMUXD_SOCKET_ADDRESS}'."
@@ -233,7 +271,7 @@ done
 if [[ "$PLATFORM_NAME" == "android" ]]; then
   stfCommand=(env "${unsetVars[@]}" stf provider
     --allow-remote
-    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>"
+    --connect-url-pattern "$connectUrlPattern"
     --storage-url "$storageUrl"
     --screen-ws-url-pattern "${socketProtocol}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/")
 else
@@ -257,7 +295,7 @@ else
     --connect-sub "$STF_PROVIDER_CONNECT_SUB"
     --connect-app-dealer "$STF_PROVIDER_CONNECT_APP_DEALER"
     --connect-dev-dealer "$STF_PROVIDER_CONNECT_DEV_DEALER"
-    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>"
+    --connect-url-pattern "$connectUrlPattern"
     --wda-host "$WDA_HOST"
     --wda-port "$WDA_PORT")
 fi

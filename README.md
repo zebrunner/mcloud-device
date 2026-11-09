@@ -48,7 +48,7 @@ docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<ud
   -e STF_PROVIDER_MIN_PORT=7404 -e STF_PROVIDER_MAX_PORT=7410 -p 7404-7410:7404-7410 \
   -e STF_PROVIDER_PUBLIC_IP=stf.example.com -e PUBLIC_IP_PORT=443 -e PUBLIC_IP_PROTOCOL=https \
   -e STF_PROVIDER_CONNECT_SUB=tcp://stf.example.com:7250 -e STF_PROVIDER_CONNECT_PUSH=tcp://stf.example.com:7270 \
-  -e STF_STORAGE_TOKEN=<token> -e STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=<key> -e STF_ZMQ_CURVE_SECRET_KEY=<key> \
+  -e STF_NODE_TOKEN=<node token> -e STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=<key> -e STF_ZMQ_CURVE_SECRET_KEY=<key> \
   public.ecr.aws/zebrunner/mcloud-device:<version>
 # iOS: the same with
 #   -e PLATFORM_NAME=ios -e WDA_HOST=connector -e WDA_WAIT_TIMEOUT=60
@@ -58,7 +58,7 @@ docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<ud
 
 ## Configuration
 
-Every variable has its default in the `Dockerfile`. The entrypoint validates the configuration before anything starts: every invalid variable is logged, then it exits with `0`. The numeric variables of the table must be non-negative integers, `STF_PROVIDER_MIN_PORT` must not be greater than `STF_PROVIDER_MAX_PORT`.
+Every variable has its default in the `Dockerfile`. The entrypoint validates the configuration before anything starts: every invalid variable is logged, then it exits with `0`. The numeric variables of the table must be non-negative integers, `STF_PROVIDER_MIN_PORT` must not be greater than `STF_PROVIDER_MAX_PORT`, a set `STF_PROVIDER_CONNECT_PORT` of Android must be a port `1024`-`65535`.
 
 ### Device
 
@@ -76,9 +76,9 @@ Every variable has its default in the `Dockerfile`. The entrypoint validates the
 | `STF_PROVIDER_CONNECT_SUB` | empty | The ZeroMQ PUB endpoint of STF, `tcp://<host>:<port>`, required. |
 | `STF_PROVIDER_CONNECT_APP_DEALER` | empty | The app-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS. It is not an option of the provider of Android, so it is removed from its environment. |
 | `STF_PROVIDER_CONNECT_DEV_DEALER` | empty | The device-side ZeroMQ DEALER endpoint, `tcp://<host>:<port>`, required for iOS, removed for Android as above. |
-| `STF_ZMQ_CURVE_SERVER_PUBLIC_KEY` | empty | The CURVE public key of the triproxies of the STF server (`variables.env` of mcloud), 64 hex characters, required: STF connects to ZeroMQ over CURVE only ([ZeroMQ of STF](https://github.com/zebrunner/stf/blob/develop/ZEBRUNNER.md#zeromq)). |
-| `STF_ZMQ_CURVE_SECRET_KEY` | empty | The CURVE secret key of the device host (mcloud-agent makes it), 64 hex characters, required; its public key is in `STF_ZMQ_CURVE_CLIENT_KEYS` of the STF server. Not logged. |
-| `STF_STORAGE_TOKEN` | empty | The token of the storage of STF (`x-stf-internal-token` of the screenshots and the application installs), required: it must match the one of the STF server. Not logged. |
+| `STF_ZMQ_CURVE_SERVER_PUBLIC_KEY` | empty | The CURVE public key of the triproxies of the STF server (given to the node by its enrollment, `./zebrunner.sh join` of mcloud-agent), 64 hex characters, required: STF connects to ZeroMQ over CURVE only ([ZeroMQ of STF](https://github.com/zebrunner/stf/blob/develop/ZEBRUNNER.md#zeromq)). |
+| `STF_ZMQ_CURVE_SECRET_KEY` | empty | The CURVE secret key of the device host (mcloud-agent makes it), 64 hex characters, required; the node enrolls with its public key, the STF server lets in the keys of the active nodes only. Neither logged nor traced. |
+| `STF_NODE_TOKEN` | empty | The node token of the device host, `mcn1.<label>.<secret>` (the secret: 43 base64url characters), required: `./zebrunner.sh join` of mcloud-agent enrolls the node and passes its token. STF reads it itself: the provider (and its device processes) and `stf ios-device` prove with an HMAC of it that their devices belong to the node, and authenticate with it to the storage of STF (the screenshots and the application installs). STF rejects the registration of a device without a valid proof, and a revoked node stops it ([node enrollment of STF](https://github.com/zebrunner/stf/pull/1124)). A secret: neither logged nor traced by `VERBOSE=true`, an invalid one is reported without its value. |
 | `STF_SERVICES_WAIT_TIMEOUT` | `300` | How long in seconds the entrypoint waits for the STF services above (TCP connections) before it asks for a restart. |
 | `STF_SERVICES_WAIT_RETRY` | `30` | The delay in seconds between the checks of the unreachable services. |
 | `STF_SERVICES_WAIT_RESTARTS` | `2` | How many restarts in a row the entrypoint asks for (exit `1`) when the services stay unreachable, then it exits with `0` and the restarts stop. The counter is kept in `/tmp/zebrunner/stf-services-restarts` (it survives the restarts of the container) and is reset by reachable services or by the end of the restarts. |
@@ -98,12 +98,14 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | Variable | Default | Description |
 | --- | --- | --- |
 | `STF_PROVIDER_NAME` | empty | The name of the provider in STF, required for iOS; for Android the hostname of the container by default. |
-| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the `adb connect` URL and the screen WebSocket path. |
+| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the screen WebSocket path and the `adb connect` URL unless `REMOTE_CONNECT_HOST` is set. It must be the address of the node invite (`./zebrunner.sh node-invite` of mcloud, the address the server connects to): STF rejects the registration of the devices of another host with the token of the node. |
+| `REMOTE_CONNECT_HOST` | `STF_PROVIDER_HOST` | The host the users run `adb connect <host>:<port>` with (the remote debug of STF, `--connect-url-pattern`), a host name or address without a scheme and a port. With the adb relay of mcloud (`ADB_RELAY=true`: the device hosts in a private LAN, their device ports forwarded by the MCloud server) it is the public name of MCloud. Not an option of the provider (not `STF_PROVIDER_*`). |
 | `STF_PROVIDER_DEVICE_NAME` | empty | The name of the device in STF. |
 | `STF_PROVIDER_ADB_HOST` | `connector` | Android: the adb server of the connector container. |
 | `STF_PROVIDER_ADB_PORT` | `5037` | Android: the port of the adb server. |
 | `STF_PROVIDER_MIN_PORT` | `7404` | The first port of the device: the screen WebSocket. |
 | `STF_PROVIDER_MAX_PORT` | `7410` | The last port of the device. |
+| `STF_PROVIDER_CONNECT_PORT` | empty | Android: the fixed remote debug port of the device (`adb connect <host>:<port>`, `--connect-port` of the provider), `1024`-`65535`; empty: the second port of `STF_PROVIDER_MIN_PORT`..`STF_PROVIDER_MAX_PORT`. mcloud-agent sets it from the `connect_port` setting of the device and publishes the port. Needs an STF image with the `--connect-port` option of `stf provider`: the provider of an older one stops on the unknown option. iOS ignores it (`--connect-port` of `stf ios-device` is `MJPEG_PORT`). |
 | `STF_PROVIDER_BOOT_COMPLETE_TIMEOUT` | `60000` | How long in milliseconds to wait for the boot of the device. |
 | `STF_PROVIDER_CLEANUP` | `false` | Android: reset the device between the uses (uninstall the applications, reset the accounts). |
 | `STF_PROVIDER_GROUP_TIMEOUT` | `3600` | The timeout in seconds of the automatic release of an inactive device. |
@@ -140,7 +142,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `LOGGER_LEVEL` | `INFO` | The minimum level of the entrypoint logs: `DEBUG`, `INFO`, `WARN` or `ERROR`. |
 | `DEBUG` | `false` | `true` keeps the container alive for `DEBUG_TIMEOUT` seconds after the entrypoint exits. |
 | `DEBUG_TIMEOUT` | `3600` | The pause of the debug mode in seconds. |
-| `VERBOSE` | `false` | `true` traces the commands of the entrypoint (`set -x`). |
+| `VERBOSE` | `false` | `true` traces the commands of the entrypoint (`set -x`), but the checks of the secrets (`STF_NODE_TOKEN`, the CURVE keys): their values are not traced. |
 
 ## Startup
 
