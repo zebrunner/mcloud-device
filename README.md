@@ -98,7 +98,8 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | Variable | Default | Description |
 | --- | --- | --- |
 | `STF_PROVIDER_NAME` | empty | The name of the provider in STF, required for iOS; for Android the hostname of the container by default. |
-| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the `adb connect` URL and the screen WebSocket path. |
+| `STF_PROVIDER_HOST` | `STF_PROVIDER_PUBLIC_IP` | The host of the provider (the farm host): the screen WebSocket path and the `adb connect` URL unless `REMOTE_CONNECT_HOST` is set. |
+| `REMOTE_CONNECT_HOST` | `STF_PROVIDER_HOST` | The host the users run `adb connect <host>:<port>` with (the remote debug of STF, `--connect-url-pattern`), a host name or address without a scheme and a port. With the adb relay of mcloud (`ADB_RELAY_HOSTS`: the device hosts in a private LAN, their device ports forwarded by the MCloud server) it is the public name of MCloud. Not an option of the provider (not `STF_PROVIDER_*`). |
 | `STF_PROVIDER_DEVICE_NAME` | empty | The name of the device in STF. |
 | `STF_PROVIDER_ADB_HOST` | `connector` | Android: the adb server of the connector container. |
 | `STF_PROVIDER_ADB_PORT` | `5037` | Android: the port of the adb server. |

@@ -94,6 +94,7 @@ scenario() {
   export STF_SERVICES_WAIT_TIMEOUT=300 STF_SERVICES_WAIT_RETRY=30 STF_SERVICES_WAIT_RESTARTS=2
   export STF_PROVIDER_PUBLIC_IP=stf.example.com PUBLIC_IP_PORT=80 PUBLIC_IP_PROTOCOL=http
   export STF_PROVIDER_NAME=mcloud-linux STF_PROVIDER_HOST=provider-host STF_PROVIDER_DEVICE_NAME="My Phone"
+  export REMOTE_CONNECT_HOST=""
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=false STF_PROVIDER_GROUP_TIMEOUT=3600
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
@@ -243,6 +244,22 @@ scenario
 USBMUXD_SOCKET_ADDRESS=""
 run_entrypoint
 check_not_contains "Android: USBMUXD_SOCKET_ADDRESS is not needed" "USBMUXD_SOCKET_ADDRESS must be" "$OUT"
+
+for value in "tcp://mcloud.example.com" "mcloud.example.com:5555" "mcloud.example.com/" "mcloud example.com"; do
+  scenario
+  REMOTE_CONNECT_HOST="$value"
+  run_entrypoint
+  check_contains "REMOTE_CONNECT_HOST='${value}' is reported" \
+    "REMOTE_CONNECT_HOST must be a host name or address without a scheme and a port, but it is '${value}'." "$OUT"
+  check "REMOTE_CONNECT_HOST='${value}' exits with 0" "0" "$STATUS"
+  check "nothing is started with REMOTE_CONNECT_HOST='${value}'" "" "$(calls socat)$(started)"
+done
+for value in mcloud.example.com 203.0.113.10; do
+  scenario
+  REMOTE_CONNECT_HOST="$value"
+  run_entrypoint
+  check_not_contains "REMOTE_CONNECT_HOST='${value}' is valid" "REMOTE_CONNECT_HOST must be" "$OUT"
+done
 
 scenario
 STF_PROVIDER_CONNECT_PUSH=""
@@ -471,6 +488,21 @@ check_contains "STF_PROVIDER_HOST is STF_PROVIDER_PUBLIC_IP by default" "--conne
 check_contains "the provider gets the default STF_PROVIDER_HOST" "STF_PROVIDER_HOST=10.0.0.1" "$(calls env)"
 
 scenario
+unset REMOTE_CONNECT_HOST
+run_entrypoint
+check_contains "the adb connect URL is STF_PROVIDER_HOST without REMOTE_CONNECT_HOST" \
+  "--connect-url-pattern|provider-host:<%= publicPort %>|" "$(started)"
+
+scenario
+REMOTE_CONNECT_HOST=mcloud.example.com
+run_entrypoint
+check_contains "REMOTE_CONNECT_HOST is the host of the adb connect URL" \
+  "--connect-url-pattern|mcloud.example.com:<%= publicPort %>|" "$(started)"
+check_contains "the screen WebSocket keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" \
+  "--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/<%= serial %>/<%= publicPort %>/" "$(started)"
+check_contains "the provider keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" "STF_PROVIDER_HOST=provider-host" "$(calls env)"
+
+scenario
 PUBLIC_IP_PROTOCOL=HTTPS
 PUBLIC_IP_PORT=443
 run_entrypoint
@@ -483,6 +515,15 @@ run_entrypoint
 check "the ios-device options" \
   "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100" \
   "$(started)"
+
+scenario ios
+REMOTE_CONNECT_HOST=mcloud.example.com
+run_entrypoint
+check_contains "iOS: REMOTE_CONNECT_HOST is the host of the adb connect URL" \
+  "--connect-url-pattern|mcloud.example.com:<%= publicPort %>|" "$(started)"
+check_contains "iOS: the screen WebSocket keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" \
+  "--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/" "$(started)"
+check_contains "iOS: --host keeps STF_PROVIDER_HOST with REMOTE_CONNECT_HOST" "--host|provider-host|" "$(started)"
 
 scenario ios
 STF_PROVIDER_DEVICE_NAME=""

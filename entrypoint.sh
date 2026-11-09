@@ -40,6 +40,9 @@ PUBLIC_IP_PROTOCOL="${PUBLIC_IP_PROTOCOL,,}"
 WIRELESS="${WIRELESS,,}"
 # The provider of Android reads STF_PROVIDER_HOST as its --host option, the public address is its default
 export STF_PROVIDER_HOST="${STF_PROVIDER_HOST:-$STF_PROVIDER_PUBLIC_IP}"
+# The adb connect URL of the remote debug: REMOTE_CONNECT_HOST (e.g. the adb relay of the MCloud server for the device
+# hosts of a private LAN), STF_PROVIDER_HOST by default. Not an STF_PROVIDER_* name: the provider would read it as its option
+connectUrlPattern="${REMOTE_CONNECT_HOST:-$STF_PROVIDER_HOST}:<%= publicPort %>"
 wdaStatusUrl="http://${WDA_HOST}:${WDA_PORT}/status"
 # The usbmuxd socket of /var/run/usbmuxd (a symlink to it, see Dockerfile)
 usbmuxdSocket="/tmp/usbmuxd/usbmuxd"
@@ -95,6 +98,9 @@ done
 if [[ "$STF_PROVIDER_MIN_PORT" =~ ^[0-9]+$ && "$STF_PROVIDER_MAX_PORT" =~ ^[0-9]+$ ]] &&
   ((STF_PROVIDER_MIN_PORT > STF_PROVIDER_MAX_PORT)); then
   configError "STF_PROVIDER_MIN_PORT (${STF_PROVIDER_MIN_PORT}) must not be greater than STF_PROVIDER_MAX_PORT (${STF_PROVIDER_MAX_PORT})."
+fi
+if [[ -n "$REMOTE_CONNECT_HOST" && ! "$REMOTE_CONNECT_HOST" =~ ^[^:/[:space:]]+$ ]]; then
+  configError "REMOTE_CONNECT_HOST must be a host name or address without a scheme and a port, but it is '${REMOTE_CONNECT_HOST}'."
 fi
 if [[ "$PLATFORM_NAME" == "ios" && "$WIRELESS" != "true" && ! "$USBMUXD_SOCKET_ADDRESS" =~ ^[^:]+:[0-9]+$ ]]; then
   configError "USBMUXD_SOCKET_ADDRESS must be <host>:<port>, but it is '${USBMUXD_SOCKET_ADDRESS}'."
@@ -233,7 +239,7 @@ done
 if [[ "$PLATFORM_NAME" == "android" ]]; then
   stfCommand=(env "${unsetVars[@]}" stf provider
     --allow-remote
-    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>"
+    --connect-url-pattern "$connectUrlPattern"
     --storage-url "$storageUrl"
     --screen-ws-url-pattern "${socketProtocol}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/d/${STF_PROVIDER_HOST}/<%= serial %>/<%= publicPort %>/")
 else
@@ -257,7 +263,7 @@ else
     --connect-sub "$STF_PROVIDER_CONNECT_SUB"
     --connect-app-dealer "$STF_PROVIDER_CONNECT_APP_DEALER"
     --connect-dev-dealer "$STF_PROVIDER_CONNECT_DEV_DEALER"
-    --connect-url-pattern "${STF_PROVIDER_HOST}:<%= publicPort %>"
+    --connect-url-pattern "$connectUrlPattern"
     --wda-host "$WDA_HOST"
     --wda-port "$WDA_PORT")
 fi
