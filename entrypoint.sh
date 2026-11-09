@@ -37,7 +37,8 @@ untraced() {
   return "$status"
 }
 
-# validateSecrets: the required variables (requiredVars, stfServices) and the CURVE keys, run untraced (secrets)
+# validateSecrets: the required variables (requiredVars, stfServices), the node token and the CURVE keys, run untraced
+# (secrets); the errors do not show the values
 # it is called by untraced
 # shellcheck disable=SC2329
 validateSecrets() {
@@ -46,6 +47,9 @@ validateSecrets() {
       configError "${var} is required but empty or unset."
     fi
   done
+  if [[ -n "$STF_NODE_TOKEN" && ! "$STF_NODE_TOKEN" =~ $nodeTokenPattern ]]; then
+    configError "STF_NODE_TOKEN must be a node token mcn1.<label>.<secret> (./zebrunner.sh join of mcloud-agent)."
+  fi
   for var in STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
     if [[ -n "${!var}" && ! "${!var}" =~ ^[0-9a-fA-F]{64}$ ]]; then
       configError "${var} must be a key of 64 hex characters (stf curve-keygen)."
@@ -87,9 +91,13 @@ if [[ ! "$WIRELESS" =~ ^(true|false)$ ]]; then
   configError "WIRELESS must be true or false, but it is '${WIRELESS}'."
 fi
 
-# the token of the STF storage, the CURVE keys of ZeroMQ and the node token (STF_NODE_TOKEN, optional) are read by STF
-# itself, the provider and its device processes inherit them: the values are neither logged nor traced
-requiredVars=(STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
+# the node token (the device binding and the storage) and the CURVE keys of ZeroMQ are read by STF itself, the provider
+# and its device processes inherit them: the values are neither logged nor traced
+requiredVars=(STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY)
+# the node token of mcloud-agent ./zebrunner.sh join (zebrunner/stf lib/util/zebrunner-nodes.ts): the secret is 32 bytes
+# in base64url
+nodeTokenPattern='^mcn1\.[a-z0-9][a-z0-9-]{0,39}\.[A-Za-z0-9_-]{43}$'
+
 # the STF services of tcp://<host>:<port>, they are awaited before the start
 stfServices=(STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB)
 if [[ "$PLATFORM_NAME" == "ios" ]]; then

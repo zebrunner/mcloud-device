@@ -63,8 +63,8 @@ exit 0'
 # the stub body is expanded when the stub runs
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
-for var in STF_STORAGE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
-  STF_PROVIDER_CONNECT_PORT STF_NODE_TOKEN STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
+  STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -78,6 +78,9 @@ exit "${FAKE_STF_EXIT:-0}"'
 # the CURVE keys of the scenarios, 64 hex characters
 server_key="$(printf '%064d' 0 | tr 0 a)"
 secret_key="$(printf '%064d' 0 | tr 0 b)"
+# the node token of mcloud-agent ./zebrunner.sh join: mcn1.<label>.<43 base64url characters>
+node_secret="Ab_-$(printf '%039d' 0 | tr 0 c)"
+node_token="mcn1.agent-1.${node_secret}"
 
 # scenario <platform>: a fresh state, an Android (by default) or an iOS device with reachable STF services
 scenario() {
@@ -89,12 +92,12 @@ scenario() {
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
   export STF_PROVIDER_CONNECT_APP_DEALER=tcp://app-host:7160 STF_PROVIDER_CONNECT_DEV_DEALER=tcp://dev-host:7260
-  export STF_STORAGE_TOKEN=storage-token
+  export STF_NODE_TOKEN="$node_token"
   export STF_ZMQ_CURVE_SERVER_PUBLIC_KEY="$server_key" STF_ZMQ_CURVE_SECRET_KEY="$secret_key"
   export STF_SERVICES_WAIT_TIMEOUT=300 STF_SERVICES_WAIT_RETRY=30 STF_SERVICES_WAIT_RESTARTS=2
   export STF_PROVIDER_PUBLIC_IP=stf.example.com PUBLIC_IP_PORT=80 PUBLIC_IP_PROTOCOL=http
   export STF_PROVIDER_NAME=mcloud-linux STF_PROVIDER_HOST=provider-host STF_PROVIDER_DEVICE_NAME="My Phone"
-  export REMOTE_CONNECT_HOST="" STF_NODE_TOKEN=""
+  export REMOTE_CONNECT_HOST=""
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
   export STF_PROVIDER_CONNECT_PORT=""
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=false STF_PROVIDER_GROUP_TIMEOUT=3600
@@ -131,7 +134,7 @@ check "valid configuration starts STF" "0" "$STATUS"
 check_contains "banner" "MCLOUD-DEVICE" "$OUT"
 check_not_contains "valid configuration is not reported" "Invalid configuration" "$OUT"
 
-for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_STORAGE_TOKEN \
+for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN \
   STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   scenario
   export "${var}="
@@ -455,54 +458,61 @@ broadcasts="$(calls websocat | wc -l)"
 /bin/sleep 0.5
 check "websocat is not started again after the entrypoint" "$broadcasts" "$(calls websocat | wc -l)"
 
-section "ZeroMQ security and the storage token"
+section "ZeroMQ security and the node token"
 for platform in android ios; do
-  scenario "$platform"
-  run_entrypoint
-  check "${platform}: the CURVE keys and the storage token start STF" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
-  stf_env="$(calls env)"
-  check_contains "${platform}: STF gets the public key of the server" "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$stf_env"
-  check_contains "${platform}: STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$stf_env"
-  check_contains "${platform}: STF gets the storage token" "STF_STORAGE_TOKEN=storage-token" "$stf_env"
-  check_not_contains "${platform}: the secret key is not logged" "$secret_key" "$OUT"
-  check_not_contains "${platform}: the storage token is not logged" "storage-token" "$OUT"
+  for verbose in false true; do
+    scenario "$platform"
+    export VERBOSE="$verbose"
+    run_entrypoint
+    check "${platform}, VERBOSE=${verbose}: the CURVE keys and the node token start STF" "0:yes" \
+      "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
+    stf_env="$(calls env)"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the public key of the server" \
+      "STF_ZMQ_CURVE_SERVER_PUBLIC_KEY=${server_key}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the secret key" "STF_ZMQ_CURVE_SECRET_KEY=${secret_key}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF gets the node token" "STF_NODE_TOKEN=${node_token}" "$stf_env"
+    check_contains "${platform}, VERBOSE=${verbose}: STF is started" "Starting STF ${platform}" "$OUT"
+    check_not_contains "${platform}, VERBOSE=${verbose}: the secret key is not logged" "$secret_key" "$OUT"
+    check_not_contains "${platform}, VERBOSE=${verbose}: the node token is not logged" "$node_secret" "$OUT"
+    [[ "$verbose" == true ]] && check_contains "${platform}: VERBOSE=true traces the entrypoint" "+ untraced validateSecrets" "$OUT"
+  done
 
-  for var in STF_STORAGE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+  for var in STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
     scenario "$platform"
     unset "$var"
     run_entrypoint
     check_contains "${platform}: a missing ${var} is a configuration error" "${var} is required but empty or unset." "$OUT"
     check "${platform}: nothing is started without ${var}" "0:" "${STATUS}:$(calls socat)$(started)"
   done
-done
 
-# the node token of mcloud-agent ./zebrunner.sh join, also the storage token
-node_token="mcn1.agent-1.$(printf '%043d' 0 | tr 0 c)"
-for platform in android ios; do
-  scenario "$platform"
-  run_entrypoint
-  check "${platform}: no node token by default" "STF_NODE_TOKEN=" "$(calls env | grep '^STF_NODE_TOKEN=')"
-
-  for verbose in false true; do
+  # a wrong prefix, an upper case or too long label, a short or long secret, a character out of base64url, no label
+  for value in "mcn2.agent-1.${node_secret}" "mcn1.Agent-1.${node_secret}" "mcn1.-agent.${node_secret}" \
+    "mcn1.$(printf '%041d' 0 | tr 0 a).${node_secret}" "mcn1.agent-1.${node_secret%?}" "mcn1.agent-1.${node_secret}c" \
+    "mcn1.agent-1.${node_secret%?}=" "mcn1..${node_secret}" "mcn1.agent-1.${node_secret} " "${node_secret}"; do
+    for verbose in false true; do
+      scenario "$platform"
+      export STF_NODE_TOKEN="$value" VERBOSE="$verbose"
+      run_entrypoint
+      check_contains "${platform}, VERBOSE=${verbose}: the node token '${value:0:20}...' is reported" \
+        "STF_NODE_TOKEN must be a node token mcn1.<label>.<secret> (./zebrunner.sh join of mcloud-agent)." "$OUT"
+      check "${platform}, VERBOSE=${verbose}: an invalid node token exits with 0 and starts nothing" "0:" \
+        "${STATUS}:$(calls socat)$(started)"
+      check_not_contains "${platform}, VERBOSE=${verbose}: the invalid node token is not logged" "${node_secret:4:30}" "$OUT"
+    done
+  done
+  for value in "mcn1.a.${node_secret}" "mcn1.$(printf '%040d' 0 | tr 0 a).${node_secret}" "mcn1.0-node-.${node_secret}"; do
     scenario "$platform"
-    export STF_NODE_TOKEN="$node_token" STF_STORAGE_TOKEN="$node_token" VERBOSE="$verbose"
+    export STF_NODE_TOKEN="$value"
     run_entrypoint
-    check "${platform}, VERBOSE=${verbose}: STF starts with the node token" "0:yes" "${STATUS}:$([[ -n "$(started)" ]] && echo yes)"
-    stf_env="$(calls env)"
-    check_contains "${platform}, VERBOSE=${verbose}: STF gets the node token" "STF_NODE_TOKEN=${node_token}" "$stf_env"
-    check_contains "${platform}, VERBOSE=${verbose}: STF gets the node token as the storage token" \
-      "STF_STORAGE_TOKEN=${node_token}" "$stf_env"
-    check_contains "${platform}, VERBOSE=${verbose}: STF is started" "Starting STF ${platform}" "$OUT"
-    check_not_contains "${platform}, VERBOSE=${verbose}: the node token is not logged" "$node_token" "$OUT"
-    check_not_contains "${platform}, VERBOSE=${verbose}: the secret key is not logged" "$secret_key" "$OUT"
-    [[ "$verbose" == true ]] && check_contains "${platform}: VERBOSE=true traces the entrypoint" "+ untraced validateSecrets" "$OUT"
+    check_not_contains "${platform}: the node token '${value:0:20}...' is valid" "STF_NODE_TOKEN must be" "$OUT"
   done
 done
+
 scenario
 export VERBOSE=true
-STF_STORAGE_TOKEN=""
+STF_NODE_TOKEN=""
 run_entrypoint
-check_contains "VERBOSE=true: the untraced checks still report" "STF_STORAGE_TOKEN is required but empty or unset." "$OUT"
+check_contains "VERBOSE=true: the untraced checks still report" "STF_NODE_TOKEN is required but empty or unset." "$OUT"
 check_contains "VERBOSE=true: the trace goes on after the untraced checks" "+ untraced validateSecrets" "$OUT"
 check_contains "VERBOSE=true: the commands after the secrets are traced" "+ [[ ! 7404 =~" "$OUT"
 
