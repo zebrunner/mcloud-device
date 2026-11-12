@@ -31,9 +31,9 @@ RUN wget -q -O /tmp/go-ios.tar.gz https://github.com/danielpaulus/go-ios/archive
     fi && \
     chmod 755 /out/websocat
 
-FROM public.ecr.aws/zebrunner/stf:3.1
+FROM public.ecr.aws/zebrunner/stf:3.1-develop-latest
 
-# go-ios and websocat are built for the target platform: a base image of another platform (stf:3.1 is linux/amd64
+# go-ios and websocat are built for the target platform: a base image of another platform (the STF image is linux/amd64
 # and linux/arm64) would give an image with binaries of two platforms, so the build stops
 ARG TARGETARCH
 RUN if [ -n "${TARGETARCH}" ] && [ "$(dpkg --print-architecture)" != "${TARGETARCH}" ]; then \
