@@ -4,6 +4,7 @@
 .idea
 .venv
 tests
+VERSION
 *.md
 .DS_Store
 **/.DS_Store
