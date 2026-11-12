@@ -36,6 +36,8 @@ make push VERSION=3.1    # built by docker buildx and pushed: docker login publi
 Under emulation (an amd64 image on an Apple Silicon Mac) `stf ios-device` hangs on its first go-ios command, so the iOS
 simulators of a Mac need the arm64 image.
 
+The file `VERSION` is the release in work (bumped by hand after a release, CONVENTIONS.md#versions). The `publish` job of CI pushes the image of every merge into `develop` after all the checks passed: `public.ecr.aws/zebrunner/mcloud-device:<VERSION>-develop-<sha>` (7 characters of the commit) and `<VERSION>-develop-latest`, the newest commit of `develop`.
+
 ## Run
 
 mcloud-agent creates the container (`roles/devices/templates/zebrunner-farm`, `roles/mac-devices/templates/zebrunner-farm`), linked to the connector container of the device as `connector`:
