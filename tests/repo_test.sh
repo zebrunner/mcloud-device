@@ -5,9 +5,14 @@ cd "$REPO" || exit 1
 
 section "Dockerfile pins"
 from_lines="$(grep '^FROM ' Dockerfile)"
-check "the base image and the build stage are <image>:<version>@sha256:<digest>" "" \
-  "$(grep -vE '^FROM (--platform=\$\{BUILDPLATFORM\} )?[a-z0-9./-]+:[0-9][A-Za-z0-9.-]*@sha256:[0-9a-f]{64}( AS [a-z-]+)?$' <<< "$from_lines")"
+stf_from="$(grep '^FROM public.ecr.aws/zebrunner/stf:' <<< "$from_lines")"
+check "the build stages are <image>:<version>@sha256:<digest>" "" \
+  "$(grep -v '^FROM public.ecr.aws/zebrunner/stf:' <<< "$from_lines" |
+    grep -vE '^FROM (--platform=\$\{BUILDPLATFORM\} )?[a-z0-9./-]+:[0-9][A-Za-z0-9.-]*@sha256:[0-9a-f]{64}( AS [a-z-]+)?$')"
 check_contains "the base image is the STF image" "FROM public.ecr.aws/zebrunner/stf:" "$from_lines"
+# the STF of develop (README.md#image-contents) floats with it, a release is pinned by digest
+check "the STF base is <version>-develop-latest or <version>@sha256:<digest>" "" \
+  "$(grep -vE '^FROM public\.ecr\.aws/zebrunner/stf:[0-9][0-9.]*(-develop-latest|@sha256:[0-9a-f]{64})$' <<< "$stf_from")"
 check_not_contains "no unpinned latest tag" ":latest" "$(grep -v '^ *#' Dockerfile)"
 # the tools of the entrypoint are installed by the image, the STF base image drops them (zebrunner/stf#1052)
 check "the apt packages are the tools of the entrypoint, without recommends" "socat curl procps" \
