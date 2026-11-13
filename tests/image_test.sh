@@ -26,7 +26,7 @@ docker info > /dev/null 2>&1 || skip "requires a running docker daemon"
 # called by the EXIT trap of lib.sh
 # shellcheck disable=SC2329
 cleanup() {
-  docker rm --force "$SERVICES" "${PREFIX}-android" "${PREFIX}-ios" "${PREFIX}-down" > /dev/null 2>&1
+  docker rm --force "$SERVICES" "${PREFIX}-android" "${PREFIX}-ios" "${PREFIX}-down" "${PREFIX}-stop" > /dev/null 2>&1
   docker network rm "$NETWORK" > /dev/null 2>&1
 }
 
@@ -147,6 +147,21 @@ check "unreachable services ask for a restart" "1" "$?"
 check_contains "the restart is reported" "Restarting (1 of 2)!" "$(cat "${WORK}/down.log")"
 check "the restart is counted in the container filesystem" "1" \
   "$(docker cp "${PREFIX}-down:/tmp/zebrunner/stf-services-restarts" - 2> /dev/null | tar -xO 2> /dev/null)"
+
+# shellcheck disable=SC2329
+# is_waiting <container>: the entrypoint waits for the unreachable STF services
+is_waiting() {
+  docker logs "$1" 2>&1 | grep -q "One more attempt in"
+}
+docker run --detach --name "${PREFIX}-stop" --platform "$PLATFORM" --env STF_PROVIDER_CONNECT_PUSH=tcp://127.0.0.1:1 \
+  --env STF_PROVIDER_CONNECT_SUB=tcp://127.0.0.1:2 "${SECRETS[@]}" "$IMAGE" > /dev/null
+wait_for 30 is_waiting "${PREFIX}-stop"
+started="$SECONDS"
+docker stop --time 30 "${PREFIX}-stop" > /dev/null
+check "docker stop ends the wait for the STF services at once, without SIGKILL" "true" \
+  "$([[ $((SECONDS - started)) -lt 10 ]] && echo true || echo false)"
+check "the stopped wait exits with 0" "0" "$(docker inspect "${PREFIX}-stop" --format '{{.State.ExitCode}}')"
+check_contains "the stop is logged" "Stopped before the start of STF. Exiting!" "$(docker logs "${PREFIX}-stop" 2>&1)"
 
 section "fake STF services"
 docker network create "$NETWORK" > /dev/null
