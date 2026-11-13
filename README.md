@@ -1,6 +1,6 @@
 # Zebrunner MCloud Device
 
-The STF provider of one Android or iOS device of [Zebrunner MCloud](https://github.com/zebrunner/mcloud): the `device-<udid>-stf` container that [mcloud-agent](https://github.com/zebrunner/mcloud-agent) starts next to the connector, appium and uploader containers of every device. It waits for the STF services (and for usbmuxd and WebDriverAgent of an iOS device), then runs the provider of [STF](https://github.com/zebrunner/stf) for the device: `stf provider` for Android, `stf ios-device` for iOS.
+The STF provider of one Android or iOS device of [Zebrunner MCloud](https://github.com/zebrunner/mcloud): the `device-<name>-<udid>-stf` container that [mcloud-agent](https://github.com/zebrunner/mcloud-agent) starts next to the connector, appium and uploader containers of every device. It waits for the STF services (and for usbmuxd and WebDriverAgent of an iOS device), then runs the provider of [STF](https://github.com/zebrunner/stf) for the device: `stf provider` for Android, `stf ios-device` for iOS.
 
 The image is based on the STF image `public.ecr.aws/zebrunner/stf` (Ubuntu 26.04, zebrunner/stf#1089) of the STF of [mcloud](https://github.com/zebrunner/mcloud) (`TAG_STF` of its `.env`) and is built for the platform of its base image: the STF image is `linux/amd64` and `linux/arm64` (zebrunner/stf#1063), so are go-ios and websocat; the build stops when the platform of the base image is not the target one.
 
@@ -19,7 +19,7 @@ STF runs the go-ios commands `ios install`, `ios launch` and `ios reboot` for an
 
 The image installs the tools of its entrypoint itself, so it does not depend on the ones of the STF base image (the reworked STF image of zebrunner/stf#1052 drops go-ios, socat and curl): `socat`, `curl` and `procps` from the Ubuntu release of the base image.
 
-Everything the build downloads is pinned: the images by version and digest, go-ios and websocat by version and SHA-256 (in the `tools` build stage). The Ubuntu packages are not pinned: their exact versions disappear from the mirror after an update.
+Everything the build downloads is pinned but the STF base image: the `golang` image of the `tools` stage by version and digest, go-ios and websocat by version and SHA-256. The STF base image of `develop` is the moving tag `<version>-develop-latest` on purpose: the image of `develop` is built on the newest STF of the `develop` of zebrunner/stf (published by its CI), so both are tested together before a release, which pins the base image by its version and digest (`tests/repo_test.sh` accepts these two forms only). So a build of `develop` may get another STF than the previous one. The Ubuntu packages are not pinned: their exact versions disappear from the mirror after an update.
 
 ## Build
 
@@ -40,11 +40,11 @@ The file `VERSION` is the release in work (bumped by hand after a release, CONVE
 
 ## Run
 
-mcloud-agent creates the container (`roles/devices/templates/zebrunner-farm`, `roles/mac-devices/templates/zebrunner-farm`), linked to the connector container of the device as `connector`:
+mcloud-agent creates the container (`roles/common/files/zebrunner-farm`, `device-<name>-<udid>-stf`, where `<name>` is the name of the device in `mcloud-devices.txt`), linked to the connector container of the device as `connector`:
 
 ```bash
 # Android
-docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<udid>-connector:connector \
+docker run -d --name device-<name>-<udid>-stf --restart on-failure:50 --link device-<name>-<udid>-connector:connector \
   -e PLATFORM_NAME=android -e DEVICE_UDID=<udid> -e STF_PROVIDER_DEVICE_NAME="Pixel 8" \
   -e STF_PROVIDER_NAME=mcloud-linux -e STF_PROVIDER_HOST=agent.example.com \
   -e STF_PROVIDER_MIN_PORT=7404 -e STF_PROVIDER_MAX_PORT=7410 -p 7404-7410:7404-7410 \
@@ -55,7 +55,7 @@ docker run -d --name device-<udid>-stf --restart on-failure:50 --link device-<ud
 # iOS: the same with
 #   -e PLATFORM_NAME=ios -e WDA_HOST=connector -e WDA_WAIT_TIMEOUT=60
 #   -e STF_PROVIDER_CONNECT_APP_DEALER=tcp://stf.example.com:7160 -e STF_PROVIDER_CONNECT_DEV_DEALER=tcp://stf.example.com:7260
-# a wireless tvOS device has no connector: -e WIRELESS=true -e WDA_HOST=<host of its WebDriverAgent> -e WDA_PORT=<port>
+# a device without usbmuxd (the proxy connection, a simulator) adds -e WIRELESS=true: its connector relays WebDriverAgent
 ```
 
 ## Configuration
@@ -68,7 +68,7 @@ Every variable has its default in the `Dockerfile`. The entrypoint validates the
 | --- | --- | --- |
 | `PLATFORM_NAME` | `android` | `android` or `ios`, case-insensitive. |
 | `DEVICE_UDID` | empty | The UDID of the device, required for iOS (`--serial` of `stf ios-device`). The provider of Android serves the device of the adb server of `STF_PROVIDER_ADB_HOST`. |
-| `WIRELESS` | `false` | `true` for an iOS device without a usb path (e.g. an Apple TV reached over a network tunnel of the host): usbmuxd is not forwarded, only WebDriverAgent of `WDA_HOST` is needed. mcloud-agent sets it for the wireless devices. |
+| `WIRELESS` | `false` | `true` for an iOS device without usbmuxd: usbmuxd is not forwarded, only WebDriverAgent of `WDA_HOST` is needed. mcloud-agent sets it for the `proxy` connection (WebDriverAgent started by another tool, e.g. for an Apple TV) and for the simulators (`ios-sim`), whose connector relays WebDriverAgent. A `wireless` device (lockdown over Wi-Fi) has usbmuxd: the netmuxd of its connector on Linux, the usbmuxd of the host on macOS, so it gets `WIRELESS=false`. The container always has a connector (`WDA_HOST=connector`). |
 
 ### STF services
 
@@ -128,7 +128,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `WDA_HOST` | `connector` | The host of WebDriverAgent, the connector container or the host of a wireless device. |
+| `WDA_HOST` | `connector` | The host of WebDriverAgent: the connector container, which serves or relays WebDriverAgent for every connection. |
 | `WDA_PORT` | `8100` | The port of WebDriverAgent. |
 | `MJPEG_PORT` | `8101` | The MJPEG port of WebDriverAgent: the screen of `stf ios-device` (its `--connect-port`). |
 | `WDA_WAIT_TIMEOUT` | `30` | How long in seconds the entrypoint waits for `http://${WDA_HOST}:${WDA_PORT}/status`. |
@@ -158,7 +158,7 @@ The image runs as `stf`, the user of the base image: the forwarded usbmuxd socke
 
 ## Limitations
 
-- The main repository [zebrunner/stf](https://github.com/zebrunner/stf) is being reworked (`sync/upstream-master`): a new base image may change the options of `stf provider` and `stf ios-device`. Dependabot does not update the base image; after a manual update `make docker` starts both commands with the options of the entrypoint and fails on an unknown option.
+- The main repository [zebrunner/stf](https://github.com/zebrunner/stf) is being reworked (`sync/upstream-master`): a new base image may change the options of `stf provider` and `stf ios-device`. The base image of `develop` follows the `develop` of STF (see [Image contents](#image-contents)), Dependabot does not update it: `make docker` of every build starts both commands with the options of the entrypoint and fails on an unknown option, so a changed option of STF fails the next build of `develop` before its image is published.
 - `STF_PROVIDER_CONNECT_PUSH`, `STF_PROVIDER_CONNECT_SUB` and the dealers are single endpoints.
 
 ## Exit codes and health
@@ -183,7 +183,7 @@ Every test script prints its checks and writes JUnit XML into `JUNIT_DIR` when i
 
 The GitHub Actions workflow `.github/workflows/ci.yml` runs the same `lint`, `test` and `docker` jobs on pushes and pull requests to `develop`, `main` and `master`.
 
-Dependabot (`.github/dependabot.yml`) opens weekly pull requests for the GitHub Actions. The base image, go-ios and websocat are updated by hand: the version, the digest or the SHA-256 in the `Dockerfile` and the [Image contents](#image-contents).
+Dependabot (`.github/dependabot.yml`) opens weekly pull requests for the GitHub Actions. go-ios, websocat and the STF base image of a release are updated by hand: the version, the digest or the SHA-256 in the `Dockerfile` and the [Image contents](#image-contents); the base image of `develop` is the moving `<version>-develop-latest`.
 
 The conventions of the style, the formatting and the tooling of this repository are in [CONVENTIONS.md](CONVENTIONS.md), the same in all the MCloud repositories.
 
