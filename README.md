@@ -154,7 +154,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 4. The screen WebSocket is broadcast to `BROADCAST_PORT`; websocat is started again a second after it exits.
 5. STF starts: `stf provider` for Android, `stf ios-device` for iOS. The entrypoint passes `SIGTERM` of `docker stop` to STF, so it stops gracefully, and exits with the exit code of STF. For iOS the status of WebDriverAgent is logged after STF (#184).
 
-`docker stop` before the start of STF (e.g. while the STF services are awaited) ends the waits at once: the entrypoint, PID 1 of the container, stops its background processes and exits with `0`. STF needs up to 10 seconds to stop (the timeout of its shutdown handlers, also the time the provider gives the processes of its devices), as long as the default stop timeout of docker: stop the container with a longer timeout, e.g. `docker stop --time 30`, or docker kills STF (exit code `137`) before it unregisters the device.
+`docker stop` before the start of STF (e.g. while the STF services are awaited) ends the waits at once: the entrypoint, PID 1 of the container, stops its background processes and exits with `0`. STF needs up to 10 seconds to stop (the timeout of its shutdown handlers, also the time the provider gives the processes of its devices), as long as the default stop timeout of docker: stop the container with a longer timeout, e.g. `docker stop --time 30` as `zebrunner-farm` of mcloud-agent does (zebrunner/mcloud-agent#489), or docker kills STF (exit code `137`) before it unregisters the device.
 
 The image runs as `stf`, the user of the base image: the forwarded usbmuxd socket is `/tmp/usbmuxd/usbmuxd`, `/var/run/usbmuxd` is a symlink to it.
 
