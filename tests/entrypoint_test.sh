@@ -14,7 +14,16 @@ mkdir -p "${WORK}/usbmuxd" "${WORK}/zebrunner"
 
 # the stubs read their behavior from the FAKE_* variables of the scenario
 export FAKE_WORK="$WORK"
-record_stub sleep
+# sleep: returns at once, FAKE_SLEEP_HANG=<seconds>: the sleep of these seconds runs until it is killed (its pid in
+# sleep.pid)
+# the stub body is expanded when the stub runs
+# shellcheck disable=SC2016
+stub sleep '(IFS="|"; echo "sleep|$*") >> "$FAKE_WORK/calls.log"
+if [[ -n "$FAKE_SLEEP_HANG" && "$1" == "$FAKE_SLEEP_HANG" ]]; then
+  echo "$$" > "$FAKE_WORK/sleep.pid"
+  exec /bin/sleep 30
+fi
+exit 0'
 # websocat: runs for a while (FAKE_WEBSOCAT_SEC) and exits
 # the stub body is expanded when the stub runs
 # shellcheck disable=SC2016
@@ -87,7 +96,7 @@ scenario() {
   rm -rf "${WORK:?}"/zebrunner/* "${WORK:?}"/usbmuxd/* "${WORK}"/*.n
   reset_calls
   # the variables of the previous scenario
-  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT
+  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT FAKE_SLEEP_HANG
   # the defaults of the Dockerfile
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
@@ -337,12 +346,17 @@ check "STF is not started with unreachable services" "" "$(started)$(calls webso
 run_entrypoint
 check "the second restart is asked" "1" "$STATUS"
 check_contains "the second restart is reported" "Restarting (2 of 2)!" "$OUT"
+# after the restarts the services are awaited in place: the third check of sub-host succeeds
+FAKE_DOWN=''
+FAKE_FLAKY=sub-host
+FAKE_FLAKY_CHECKS=2
+reset_calls
 run_entrypoint
-check "unreachable services after STF_SERVICES_WAIT_RESTARTS restarts exit with 0" "0" "$STATUS"
-check_contains "the end of the restarts is reported" "STF services are not reachable after 2 restarts" "$OUT"
+check "unreachable services after STF_SERVICES_WAIT_RESTARTS restarts are awaited without an exit" "0" "$STATUS"
+check_contains "the end of the restarts is reported" "STF services are not reachable after 2 restarts: STF_PROVIDER_CONNECT_SUB. Waiting for them" "$OUT"
+check "the awaited services are checked every STF_SERVICES_WAIT_RETRY seconds" "$(printf '30\n30')" "$(waits)"
+check_contains "STF starts when the awaited services are back" "provider" "$(started)"
 check "the counter is reset for the next start" "false" "$([[ -e "${WORK}/zebrunner/stf-services-restarts" ]] && echo true || echo false)"
-run_entrypoint
-check "the next start asks for a restart again" "1" "$STATUS"
 
 scenario
 echo 1 > "${WORK}/zebrunner/stf-services-restarts"
@@ -361,9 +375,13 @@ scenario
 FAKE_DOWN=sub-host
 STF_SERVICES_WAIT_TIMEOUT=0
 STF_SERVICES_WAIT_RESTARTS=0
+FAKE_DOWN=''
+FAKE_FLAKY=sub-host
+FAKE_FLAKY_CHECKS=2
 run_entrypoint
-check "STF_SERVICES_WAIT_RESTARTS=0 exits with 0 at once" "0" "$STATUS"
+check "STF_SERVICES_WAIT_RESTARTS=0 waits without a restart" "0" "$STATUS"
 check_contains "STF_SERVICES_WAIT_RESTARTS=0 is reported" "STF services are not reachable after 0 restarts" "$OUT"
+check_not_contains "STF_SERVICES_WAIT_RESTARTS=0 asks for no restart" "Restarting" "$OUT"
 
 section "usbmuxd"
 scenario ios
@@ -635,6 +653,44 @@ STATUS=$?
 check_contains "SIGTERM of the entrypoint is passed to STF" "SIGTERM" "$(started)"
 check "the entrypoint exits with the status of the stopped STF" "143" "$STATUS"
 check_contains "the stop of STF is logged" "STF exited with 143." "$(cat "${WORK}/hang.out")"
+
+# stop_while <description> <sleep seconds>: SIGTERM while the entrypoint sleeps these seconds before the start of STF
+# ends it at once with 0 and stops its background processes
+stop_while() {
+  export FAKE_SLEEP_HANG="$2"
+  PATH="${WORK}/bin:${PATH}" bash "${WORK}/entrypoint.sh" > "${WORK}/stop.out" 2>&1 &
+  local entrypoint_pid=$!
+  for _ in $(seq 50); do
+    [[ -n "$(calls sleep | grep -xF "$2")" ]] && break
+    /bin/sleep 0.1
+  done
+  local started="$SECONDS"
+  kill -TERM "$entrypoint_pid"
+  wait "$entrypoint_pid"
+  STATUS=$?
+  check "$1: SIGTERM ends the entrypoint with 0" "0" "$STATUS"
+  check "$1: SIGTERM ends the wait at once" "true" "$([[ $((SECONDS - started)) -lt 5 ]] && echo true || echo false)"
+  check_contains "$1: the stop is logged" "Stopped before the start of STF. Exiting!" "$(cat "${WORK}/stop.out")"
+  /bin/sleep 0.2
+  local sleep_pid
+  sleep_pid="$(cat "${WORK}/sleep.pid" 2> /dev/null)"
+  check "$1: the background sleep is stopped" "false" "$(kill -0 "$sleep_pid" 2> /dev/null && echo true || echo false)"
+  kill "$sleep_pid" 2> /dev/null
+  check "$1: STF is not started" "" "$(started)"
+}
+
+scenario
+FAKE_DOWN=sub-host
+STF_SERVICES_WAIT_RETRY=7
+stop_while "the wait for the STF services" 7
+
+scenario ios
+FAKE_SOCKET=none
+stop_while "the wait for usbmuxd" 5
+
+scenario ios
+FAKE_WDA=down
+stop_while "the wait for WebDriverAgent" 2
 
 section "logs"
 scenario

@@ -83,7 +83,7 @@ Every variable has its default in the `Dockerfile`. The entrypoint validates the
 | `STF_NODE_TOKEN` | empty | The node token of the device host, `mcn1.<label>.<secret>` (the secret: 43 base64url characters), required: `./zebrunner.sh join` of mcloud-agent enrolls the node and passes its token. STF reads it itself: the provider (and its device processes) and `stf ios-device` prove with an HMAC of it that their devices belong to the node, and authenticate with it to the storage of STF (the screenshots and the application installs). STF rejects the registration of a device without a valid proof, and a revoked node stops it ([node enrollment of STF](https://github.com/zebrunner/stf/pull/1124)). A secret: neither logged nor traced by `VERBOSE=true`, an invalid one is reported without its value. |
 | `STF_SERVICES_WAIT_TIMEOUT` | `300` | How long in seconds the entrypoint waits for the STF services above (TCP connections) before it asks for a restart. |
 | `STF_SERVICES_WAIT_RETRY` | `30` | The delay in seconds between the checks of the unreachable services. |
-| `STF_SERVICES_WAIT_RESTARTS` | `2` | How many restarts in a row the entrypoint asks for (exit `1`) when the services stay unreachable, then it exits with `0` and the restarts stop. The counter is kept in `/tmp/zebrunner/stf-services-restarts` (it survives the restarts of the container) and is reset by reachable services or by the end of the restarts. |
+| `STF_SERVICES_WAIT_RESTARTS` | `2` | How many restarts in a row the entrypoint asks for (exit `1`) when the services stay unreachable, then it waits for them without a restart (checked every `STF_SERVICES_WAIT_RETRY` seconds) and starts STF when they are back. The counter is kept in `/tmp/zebrunner/stf-services-restarts` (it survives the restarts of the container) and is reset by reachable services or by the end of the restarts. |
 
 ### Public address of STF
 
@@ -149,10 +149,12 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 ## Startup
 
 1. The configuration is validated (see [Configuration](#configuration)).
-2. The STF services are awaited: push, sub and for iOS the dealers. Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds.
+2. The STF services are awaited: push, sub and for iOS the dealers. Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds, then the container is restarted (`STF_SERVICES_WAIT_RESTARTS` times in a row); after the restarts they are awaited as long as they are down.
 3. iOS: `/var/run/usbmuxd` is forwarded to `USBMUXD_SOCKET_ADDRESS` (socat, skipped with `WIRELESS=true`), then WebDriverAgent is awaited.
 4. The screen WebSocket is broadcast to `BROADCAST_PORT`; websocat is started again a second after it exits.
 5. STF starts: `stf provider` for Android, `stf ios-device` for iOS. The entrypoint passes `SIGTERM` of `docker stop` to STF, so it stops gracefully, and exits with the exit code of STF. For iOS the status of WebDriverAgent is logged after STF (#184).
+
+`docker stop` before the start of STF (e.g. while the STF services are awaited) ends the waits at once: the entrypoint, PID 1 of the container, stops its background processes and exits with `0`. STF needs up to 10 seconds to stop (the timeout of its shutdown handlers, also the time the provider gives the processes of its devices), as long as the default stop timeout of docker: stop the container with a longer timeout, e.g. `docker stop --time 30` as `zebrunner-farm` of mcloud-agent does (zebrunner/mcloud-agent#489), or docker kills STF (exit code `137`) before it unregisters the device.
 
 The image runs as `stf`, the user of the base image: the forwarded usbmuxd socket is `/tmp/usbmuxd/usbmuxd`, `/var/run/usbmuxd` is a symlink to it.
 
@@ -163,7 +165,7 @@ The image runs as `stf`, the user of the base image: the forwarded usbmuxd socke
 
 ## Exit codes and health
 
-- `0`: a problem a restart does not fix: an invalid configuration (every invalid variable is logged), or STF services unreachable after `STF_SERVICES_WAIT_RESTARTS` restarts in a row. Also `0` when STF stops gracefully (e.g. `docker stop`).
+- `0`: a problem a restart does not fix: an invalid configuration (every invalid variable is logged). Also `0` when STF stops gracefully (`docker stop` with a timeout longer than 10 seconds, see [Startup](#startup)) or when `docker stop` stops the container before the start of STF. STF services unreachable after `STF_SERVICES_WAIT_RESTARTS` restarts in a row are awaited without an exit: the device comes back with the server.
 - `1`: a restart may fix it: unreachable STF services (up to `STF_SERVICES_WAIT_RESTARTS` times in a row), usbmuxd or WebDriverAgent of an iOS device not available.
 - Otherwise the exit code of STF.
 - The healthcheck of the image is the STF process (`pgrep -f "stf (provider|ios-device)"`), mcloud-agent shows the health state of the container.
@@ -176,8 +178,8 @@ The image runs as `stf`, the user of the base image: the forwarded usbmuxd socke
 | Target | What it checks |
 | --- | --- |
 | `make lint` | `tests/lint.sh`: yamllint, actionlint, hadolint, pymarkdown, `bash -n`, ShellCheck and shfmt (style of `.editorconfig`), every env var of the `Dockerfile` documented in this README, the versions of the `Dockerfile` in [Image contents](#image-contents), the text file checks of CONVENTIONS.md. The tools are installed into `.venv` from `tests/requirements-lint.txt`; hadolint comes from `brew install hadolint` on macOS. |
-| `make test` | The static checks of the repository (`tests/repo_test.sh`: the pins and the env vars of the `Dockerfile`, the Dependabot configuration) and the tests of `util/logger.sh`, `util/debug.sh` and `entrypoint.sh` (`tests/entrypoint_test.sh`): configuration validation, the wait for the STF services and its restarts, usbmuxd, WebDriverAgent, the options and the environment of `stf provider` and `stf ios-device`, the exit codes and `SIGTERM`. The tools are stubs (`stf`, `socat`, `curl`, `websocat`, ...), so no docker, no STF and no device are needed, but bash 4+ is (on macOS `brew install bash`) and python3. |
-| `make docker` | `tests/image_test.sh`: builds the image (`PLATFORM`, `linux/amd64` by default, `IMAGE` overrides its tag, `REBUILD=true` rebuilds it), checks its contents, configuration, configuration validation, the restart of unreachable services, and starts STF of Android and iOS against fake STF services, adb, usbmuxd and WebDriverAgent: health, the broadcast port, usbmuxd as a non-root user, a graceful `docker stop`. |
+| `make test` | The static checks of the repository (`tests/repo_test.sh`: the pins and the env vars of the `Dockerfile`, the Dependabot configuration) and the tests of `util/logger.sh`, `util/debug.sh` and `entrypoint.sh` (`tests/entrypoint_test.sh`): configuration validation, the wait for the STF services and its restarts, usbmuxd, WebDriverAgent, the options and the environment of `stf provider` and `stf ios-device`, the exit codes and `SIGTERM` (passed to STF, or the stop of the waits before it). The tools are stubs (`stf`, `socat`, `curl`, `websocat`, ...), so no docker, no STF and no device are needed, but bash 4+ is (on macOS `brew install bash`) and python3. |
+| `make docker` | `tests/image_test.sh`: builds the image (`PLATFORM`, `linux/amd64` by default, `IMAGE` overrides its tag, `REBUILD=true` rebuilds it), checks its contents, configuration, configuration validation, the restart of unreachable services, and starts STF of Android and iOS against fake STF services, adb, usbmuxd and WebDriverAgent: health, the broadcast port, usbmuxd as a non-root user, a graceful `docker stop`, also of the wait for unreachable STF services. |
 
 Every test script prints its checks and writes JUnit XML into `JUNIT_DIR` when it is set.
 

@@ -7,7 +7,31 @@
 
 logger "INFO" "\n\n\n\t\tMCLOUD-DEVICE\n\n"
 
+#### Stop
+# docker stop sends SIGTERM to the entrypoint, PID 1 of the container: without a handler PID 1 ignores it and docker
+# kills the container after its stop timeout. Until STF starts (then STF gets the signal, see Start STF) the entrypoint
+# stops its background processes and exits with 0: the container is stopped on purpose
+
+# stopBeforeStf: the handler of SIGTERM and SIGINT before the start of STF
+# it is called by the trap
+# shellcheck disable=SC2329
+stopBeforeStf() {
+  logger "WARN" "Stopped before the start of STF. Exiting!"
+  # the PIDs of the background processes, one per word
+  # shellcheck disable=SC2046
+  kill $(jobs -p) 2> /dev/null
+  exit 0
+}
+trap stopBeforeStf TERM INT
+
 #### Functions
+
+# pause <seconds>: sleeps in the background: bash runs the handler of a signal after the foreground command only, so
+# a wait for a background process lets a stop end the pause at once
+pause() {
+  sleep "$1" &
+  wait $!
+}
 
 # configError <message>: logs an invalid setting, the entrypoint exits after the validation of all of them
 configError() {
@@ -23,9 +47,11 @@ parseTcpUrl() {
 }
 
 # isTcpReachable <host> <port>: the port accepts a TCP connection within 10 seconds
-# (not the connect-timeout option of socat: socat 1.7 exits with 0 with it when the connection is refused)
+# (not the connect-timeout option of socat: socat 1.7 exits with 0 with it when the connection is refused);
+# in the background like pause
 isTcpReachable() {
-  timeout 10 socat -u OPEN:/dev/null "TCP:$1:$2" > /dev/null 2>&1
+  timeout 10 socat -u OPEN:/dev/null "TCP:$1:$2" > /dev/null 2>&1 &
+  wait $!
 }
 
 # untraced <command...>: runs a command that reads the secrets without the trace of VERBOSE=true (set -x)
@@ -145,11 +171,13 @@ fi
 
 #### Wait for the STF services
 # A restart may find the services up (e.g. after an update of STF): after STF_SERVICES_WAIT_TIMEOUT seconds the entrypoint
-# asks for a restart up to STF_SERVICES_WAIT_RESTARTS times in a row, then exits with 0 to stop the restarts
-pendingServices=("${stfServices[@]}")
-deadline=$((SECONDS + STF_SERVICES_WAIT_TIMEOUT))
-while :; do
-  unreachableServices=()
+# asks for a restart up to STF_SERVICES_WAIT_RESTARTS times in a row, then it waits for them without a restart: the
+# server is down (e.g. its maintenance), the device must come back with it
+
+# checkStfServices: pendingServices keeps the ones of them that are not reachable, each one is logged
+checkStfServices() {
+  local var
+  local unreachableServices=()
   for var in "${pendingServices[@]}"; do
     parseTcpUrl "${!var}"
     if isTcpReachable "$urlHost" "$urlPort"; then
@@ -160,11 +188,17 @@ while :; do
     fi
   done
   pendingServices=("${unreachableServices[@]}")
+}
+
+pendingServices=("${stfServices[@]}")
+deadline=$((SECONDS + STF_SERVICES_WAIT_TIMEOUT))
+while :; do
+  checkStfServices
   if [[ ${#pendingServices[@]} -eq 0 || $SECONDS -ge $deadline ]]; then
     break
   fi
   logger "WARN" "One more attempt in ${STF_SERVICES_WAIT_RETRY} seconds."
-  sleep "$STF_SERVICES_WAIT_RETRY"
+  pause "$STF_SERVICES_WAIT_RETRY"
 done
 
 if [[ ${#pendingServices[@]} -gt 0 ]]; then
@@ -176,9 +210,11 @@ if [[ ${#pendingServices[@]} -gt 0 ]]; then
     logger "ERROR" "STF services are not reachable: ${pendingServices[*]}. Restarting ($((restarts + 1)) of ${STF_SERVICES_WAIT_RESTARTS})!"
     exit 1
   fi
-  rm -f "$stfRestartsFile"
-  logger "ERROR" "STF services are not reachable after ${restarts} restarts: ${pendingServices[*]}. Exiting!"
-  exit 0
+  logger "ERROR" "STF services are not reachable after ${restarts} restarts: ${pendingServices[*]}. Waiting for them, checked every ${STF_SERVICES_WAIT_RETRY} seconds."
+  while [[ ${#pendingServices[@]} -gt 0 ]]; do
+    pause "$STF_SERVICES_WAIT_RETRY"
+    checkStfServices
+  done
 fi
 rm -f "$stfRestartsFile"
 logger "INFO" "All the STF services are reachable."
@@ -214,7 +250,7 @@ elif [[ "$PLATFORM_NAME" == "ios" ]]; then
     fi
     [[ $SECONDS -ge $deadline ]] && break
     logger "WARN" "One more attempt in ${USBMUXD_SOCKET_PERIOD} seconds."
-    sleep "$USBMUXD_SOCKET_PERIOD"
+    pause "$USBMUXD_SOCKET_PERIOD"
   done
 
   if [[ "$isUsbmuxdForwarded" -eq 0 ]]; then
@@ -233,7 +269,7 @@ if [[ "$PLATFORM_NAME" == "ios" ]]; then
       exit 1
     fi
     logger "WARN" "WebDriverAgent does not answer ${wdaStatusUrl}, one more attempt in 2 seconds."
-    sleep 2
+    pause 2
   done
   logger "INFO" "WebDriverAgent is up: $(curl -s --max-time 5 "$wdaStatusUrl")"
 fi
@@ -303,7 +339,7 @@ fi
 logger "INFO" "Starting STF ${PLATFORM_NAME}: ${stfCommand[*]}"
 "${stfCommand[@]}" &
 stfPid=$!
-# docker stop sends SIGTERM to the entrypoint (PID 1): STF gets it to stop gracefully
+# docker stop sends SIGTERM to the entrypoint (PID 1): from now on STF gets it to stop gracefully (not stopBeforeStf)
 trap 'kill -TERM "$stfPid" 2> /dev/null' TERM INT
 wait "$stfPid"
 exitStatus=$?
