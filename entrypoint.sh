@@ -145,11 +145,13 @@ fi
 
 #### Wait for the STF services
 # A restart may find the services up (e.g. after an update of STF): after STF_SERVICES_WAIT_TIMEOUT seconds the entrypoint
-# asks for a restart up to STF_SERVICES_WAIT_RESTARTS times in a row, then exits with 0 to stop the restarts
-pendingServices=("${stfServices[@]}")
-deadline=$((SECONDS + STF_SERVICES_WAIT_TIMEOUT))
-while :; do
-  unreachableServices=()
+# asks for a restart up to STF_SERVICES_WAIT_RESTARTS times in a row, then it waits for them without a restart: the
+# server is down (e.g. its maintenance), the device must come back with it
+
+# checkStfServices: pendingServices keeps the ones of them that are not reachable, each one is logged
+checkStfServices() {
+  local var
+  local unreachableServices=()
   for var in "${pendingServices[@]}"; do
     parseTcpUrl "${!var}"
     if isTcpReachable "$urlHost" "$urlPort"; then
@@ -160,6 +162,12 @@ while :; do
     fi
   done
   pendingServices=("${unreachableServices[@]}")
+}
+
+pendingServices=("${stfServices[@]}")
+deadline=$((SECONDS + STF_SERVICES_WAIT_TIMEOUT))
+while :; do
+  checkStfServices
   if [[ ${#pendingServices[@]} -eq 0 || $SECONDS -ge $deadline ]]; then
     break
   fi
@@ -176,9 +184,11 @@ if [[ ${#pendingServices[@]} -gt 0 ]]; then
     logger "ERROR" "STF services are not reachable: ${pendingServices[*]}. Restarting ($((restarts + 1)) of ${STF_SERVICES_WAIT_RESTARTS})!"
     exit 1
   fi
-  rm -f "$stfRestartsFile"
-  logger "ERROR" "STF services are not reachable after ${restarts} restarts: ${pendingServices[*]}. Exiting!"
-  exit 0
+  logger "ERROR" "STF services are not reachable after ${restarts} restarts: ${pendingServices[*]}. Waiting for them, checked every ${STF_SERVICES_WAIT_RETRY} seconds."
+  while [[ ${#pendingServices[@]} -gt 0 ]]; do
+    sleep "$STF_SERVICES_WAIT_RETRY"
+    checkStfServices
+  done
 fi
 rm -f "$stfRestartsFile"
 logger "INFO" "All the STF services are reachable."

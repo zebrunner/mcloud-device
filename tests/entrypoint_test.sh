@@ -337,12 +337,17 @@ check "STF is not started with unreachable services" "" "$(started)$(calls webso
 run_entrypoint
 check "the second restart is asked" "1" "$STATUS"
 check_contains "the second restart is reported" "Restarting (2 of 2)!" "$OUT"
+# after the restarts the services are awaited in place: the third check of sub-host succeeds
+FAKE_DOWN=''
+FAKE_FLAKY=sub-host
+FAKE_FLAKY_CHECKS=2
+reset_calls
 run_entrypoint
-check "unreachable services after STF_SERVICES_WAIT_RESTARTS restarts exit with 0" "0" "$STATUS"
-check_contains "the end of the restarts is reported" "STF services are not reachable after 2 restarts" "$OUT"
+check "unreachable services after STF_SERVICES_WAIT_RESTARTS restarts are awaited without an exit" "0" "$STATUS"
+check_contains "the end of the restarts is reported" "STF services are not reachable after 2 restarts: STF_PROVIDER_CONNECT_SUB. Waiting for them" "$OUT"
+check "the awaited services are checked every STF_SERVICES_WAIT_RETRY seconds" "$(printf '30\n30')" "$(waits)"
+check_contains "STF starts when the awaited services are back" "provider" "$(started)"
 check "the counter is reset for the next start" "false" "$([[ -e "${WORK}/zebrunner/stf-services-restarts" ]] && echo true || echo false)"
-run_entrypoint
-check "the next start asks for a restart again" "1" "$STATUS"
 
 scenario
 echo 1 > "${WORK}/zebrunner/stf-services-restarts"
@@ -361,9 +366,13 @@ scenario
 FAKE_DOWN=sub-host
 STF_SERVICES_WAIT_TIMEOUT=0
 STF_SERVICES_WAIT_RESTARTS=0
+FAKE_DOWN=''
+FAKE_FLAKY=sub-host
+FAKE_FLAKY_CHECKS=2
 run_entrypoint
-check "STF_SERVICES_WAIT_RESTARTS=0 exits with 0 at once" "0" "$STATUS"
+check "STF_SERVICES_WAIT_RESTARTS=0 waits without a restart" "0" "$STATUS"
 check_contains "STF_SERVICES_WAIT_RESTARTS=0 is reported" "STF services are not reachable after 0 restarts" "$OUT"
+check_not_contains "STF_SERVICES_WAIT_RESTARTS=0 asks for no restart" "Restarting" "$OUT"
 
 section "usbmuxd"
 scenario ios
