@@ -185,8 +185,8 @@ logger "INFO" "All the STF services are reachable."
 
 #### Forward usbmuxd (iOS)
 # go-ios and the other tools read USBMUXD_SOCKET_ADDRESS themselves, /var/run/usbmuxd is forwarded for the ones that don't.
-# WIRELESS=true: a device without a usb path (e.g. Apple TV reached over a network tunnel of the host) has no usbmuxd,
-# only WebDriverAgent is needed (mcloud-agent sets it for the wireless devices)
+# WIRELESS=true: a device without usbmuxd, its connector relays WebDriverAgent; mcloud-agent sets it for the proxy
+# connection (WebDriverAgent of another tool) and the simulators, a wireless device has the usbmuxd of its connector
 if [[ "$PLATFORM_NAME" == "ios" && "$WIRELESS" == "true" ]]; then
   logger "INFO" "WIRELESS=true: usbmuxd is not forwarded, the device has no usb path."
 elif [[ "$PLATFORM_NAME" == "ios" ]]; then
