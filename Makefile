@@ -30,6 +30,9 @@ DOCKER_TESTS := tests/image_test.sh
 IMAGE_REPO ?= public.ecr.aws/zebrunner/mcloud-device
 VERSION ?= dev
 PLATFORMS ?= linux/amd64,linux/arm64
+# the publish job of CI (mcloud-conventions) pushes each platform by digest (PUSH_OUTPUT); no PUSH_CACHE:
+# its base, the stf image of develop, changes with every merge there
+PUSH_OUTPUT ?= --tag $(IMAGE_REPO):$(VERSION) --push
 
 .PHONY: help check lint test docker build push
 
@@ -52,4 +55,4 @@ push: ## the image IMAGE_REPO:VERSION for PLATFORMS, built by docker buildx and 
 	@[[ "$(VERSION)" != dev ]] || { echo "make push VERSION=<tag>: the tag of the image is required"; exit 1; }
 	@docker buildx inspect mcloud > /dev/null 2>&1 || docker buildx create --name mcloud --driver docker-container --driver-opt network=host > /dev/null
 	docker buildx build --builder mcloud --progress=plain --provenance=false --platform $(PLATFORMS) \
-	  --build-arg VERSION=$(VERSION) --tag $(IMAGE_REPO):$(VERSION) --push .
+	  --build-arg VERSION=$(VERSION) $(PUSH_OUTPUT) .
