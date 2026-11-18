@@ -57,4 +57,19 @@ else
 fi
 check_contains "escapes are interpreted" "$(printf 'a\nb')" "$(run_logger INFO INFO 'a\nb')"
 
+section "color"
+check_not_contains "no color without a terminal" $'\033' "$(run_logger INFO WARN plain)"
+check_contains "LOGGER_COLOR=always colors the level" $'\033[33m[WARN]\033[0m colored' \
+  "$(LOGGER_COLOR=always run_logger INFO WARN colored)"
+check_contains "the color of ERROR" $'\033[31m[ERROR]\033[0m' "$(LOGGER_COLOR=always run_logger INFO ERROR x)"
+check_not_contains "LOGGER_COLOR=never" $'\033' "$(LOGGER_COLOR=never run_logger INFO INFO plain)"
+
+section "banner"
+banner="$(LEVEL="" bash -c 'unset LOGGER_LEVEL; source "$LOGGER_SH"; loggerBanner mcloud-device 3.2.0 "udid 1A" ios')"
+check_contains "the first line of a service" $'[INFO] \xe2\x94\x81\xe2\x94\x81 mcloud-device 3.2.0 \xc2\xb7 udid 1A \xc2\xb7 ios' \
+  "$banner"
+check_contains "a banner without facts" $'[INFO] \xe2\x94\x81\xe2\x94\x81 mcloud-grid 2.6.0' \
+  "$(bash -c 'source "$LOGGER_SH"; loggerBanner mcloud-grid 2.6.0')"
+check "the banner is hidden by LOGGER_LEVEL=WARN" "" "$(LOGGER_LEVEL=WARN bash -c 'source "$LOGGER_SH"; loggerBanner x 1')"
+
 finish
