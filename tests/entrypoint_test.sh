@@ -140,7 +140,7 @@ section "configuration"
 scenario
 run_entrypoint
 check "valid configuration starts STF" "0" "$STATUS"
-check_contains "banner" "MCLOUD-DEVICE" "$OUT"
+check_contains "banner" $'\xe2\x94\x81\xe2\x94\x81 mcloud-device ' "$OUT"
 check_not_contains "valid configuration is not reported" "Invalid configuration" "$OUT"
 
 for var in STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN \

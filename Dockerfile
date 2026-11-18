@@ -134,6 +134,8 @@ COPY entrypoint.sh /opt/zebrunner/
 USER stf
 
 ARG VERSION=dev
+# the version of the image in the first log line
+ENV IMAGE_VERSION="${VERSION}"
 LABEL org.opencontainers.image.title="Zebrunner MCloud Device" \
       org.opencontainers.image.description="STF provider of an Android or iOS device of Zebrunner MCloud" \
       org.opencontainers.image.source="https://github.com/zebrunner/mcloud-device" \

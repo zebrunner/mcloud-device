@@ -129,7 +129,7 @@ done
 section "configuration validation"
 validation="$(docker run --rm --platform "$PLATFORM" "$IMAGE" 2>&1)"
 status=$?
-check_contains "banner" "MCLOUD-DEVICE" "$validation"
+check_contains "banner" $'\xe2\x94\x81\xe2\x94\x81 mcloud-device ' "$validation"
 check_contains "the STF services are required" "STF_PROVIDER_CONNECT_PUSH is required but empty or unset." "$validation"
 for var in STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
   check_contains "${var} is required" "${var} is required but empty or unset." "$validation"
