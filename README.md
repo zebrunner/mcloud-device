@@ -141,6 +141,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `IMAGE_VERSION` | the `VERSION` of the build | The version of the image in the first log line. |
 | `LOGGER_LEVEL` | `INFO` | The minimum level of the entrypoint logs: `DEBUG`, `INFO`, `WARN` or `ERROR`. |
 | `DEBUG` | `false` | `true` keeps the container alive for `DEBUG_TIMEOUT` seconds after the entrypoint exits. |
 | `DEBUG_TIMEOUT` | `3600` | The pause of the debug mode in seconds. |
