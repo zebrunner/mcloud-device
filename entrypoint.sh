@@ -117,6 +117,9 @@ fi
 if [[ ! "$WIRELESS" =~ ^(true|false)$ ]]; then
   configError "WIRELESS must be true or false, but it is '${WIRELESS}'."
 fi
+if [[ -n "$MCLOUD_CA_PEM" && "$MCLOUD_CA_PEM" != *"-----BEGIN CERTIFICATE-----"* ]]; then
+  configError "MCLOUD_CA_PEM must be certificates in PEM, the ones of MCloud to trust."
+fi
 
 # the node token (the device binding and the storage) and the CURVE keys of ZeroMQ are read by STF itself, the provider
 # and its device processes inherit them: the values are neither logged nor traced
@@ -289,6 +292,17 @@ entrypointPid=$$
 logger "INFO" "The screen WebSocket port ${STF_PROVIDER_MIN_PORT} is broadcast to the TCP port ${BROADCAST_PORT}."
 
 #### Start STF
+# The certificates of MCloud STF trusts besides the public CAs (MCLOUD_CA_PEM of mcloud-agent: the pinned self-signed
+# certificate of MCloud, README.md#tls-of-mcloud)
+if [[ -n "$MCLOUD_CA_PEM" ]]; then
+  mkdir -p /tmp/zebrunner
+  printf '%s\n' "$MCLOUD_CA_PEM" > /tmp/zebrunner/mcloud-ca.pem
+  export NODE_EXTRA_CA_CERTS=/tmp/zebrunner/mcloud-ca.pem
+  logger "INFO" "STF trusts the certificate of MCloud of MCLOUD_CA_PEM."
+fi
+if [[ "$NODE_TLS_REJECT_UNAUTHORIZED" == "0" ]]; then
+  logger "WARN" "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud."
+fi
 storageUrl="${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/"
 socketProtocol="ws"
 if [[ "$PUBLIC_IP_PROTOCOL" == "https" ]]; then

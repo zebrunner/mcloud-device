@@ -73,7 +73,8 @@ exit 0'
 # shellcheck disable=SC2016
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
-  STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY; do
+  STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY \
+  NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -96,7 +97,7 @@ scenario() {
   rm -rf "${WORK:?}"/zebrunner/* "${WORK:?}"/usbmuxd/* "${WORK}"/*.n
   reset_calls
   # the variables of the previous scenario
-  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT FAKE_SLEEP_HANG
+  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT FAKE_SLEEP_HANG MCLOUD_CA_PEM NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED
   # the defaults of the Dockerfile
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
@@ -596,6 +597,26 @@ PUBLIC_IP_PORT=443
 run_entrypoint
 check_contains "https: the storage URL" "--storage-url|https://stf.example.com:443/" "$(started)"
 check_contains "https: the screen WebSocket is wss" "--screen-ws-url-pattern|wss://stf.example.com:443/d/" "$(started)"
+check_contains "STF verifies the certificate of MCloud by default" "NODE_TLS_REJECT_UNAUTHORIZED=<unset>" "$(calls env)"
+check_contains "no certificate of MCloud by default" "NODE_EXTRA_CA_CERTS=<unset>" "$(calls env)"
+
+section "the certificate of MCloud"
+scenario
+export MCLOUD_CA_PEM=$'-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----'
+run_entrypoint
+check "STF starts with the certificate of MCloud" "0" "$STATUS"
+check_contains "STF trusts the certificate of MCLOUD_CA_PEM" "NODE_EXTRA_CA_CERTS=${WORK}/zebrunner/mcloud-ca.pem" "$(calls env)"
+check "the file is the certificate" "$MCLOUD_CA_PEM" "$(cat "${WORK}/zebrunner/mcloud-ca.pem")"
+check_contains "it is logged" "STF trusts the certificate of MCloud of MCLOUD_CA_PEM." "$OUT"
+scenario
+export MCLOUD_CA_PEM="not a certificate"
+run_entrypoint
+check "an invalid MCLOUD_CA_PEM is a configuration error" "0|" "${STATUS}|$(started)"
+check_contains "the error" "MCLOUD_CA_PEM must be certificates in PEM" "$OUT"
+scenario
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+run_entrypoint
+check_contains "no verification is a warning" "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud." "$OUT"
 
 section "STF of iOS"
 scenario ios
