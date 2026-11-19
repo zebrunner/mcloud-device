@@ -122,7 +122,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `BROADCAST_PORT` | `2223` | The TCP port of the screen broadcast (websocat): the screen WebSocket of `STF_PROVIDER_MIN_PORT` for the video recording of the appium container (`BROADCAST_HOST=device`). |
 | `ZMQ_TCP_KEEPALIVE` | `1` | The TCP keepalive of ZeroMQ: against the gray screen after 48 hours without a restart ([android-device#70](https://github.com/zebrunner/android-device/issues/70), [openstf/stf#100](https://github.com/openstf/stf/issues/100)). |
 | `ZMQ_TCP_KEEPALIVE_IDLE` | `600` | The idle time in seconds of the ZeroMQ keepalive. |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | `0` | `0` accepts a self-signed certificate of the STF storage (the screenshots over https, #56), node warns about it at the start of STF (#203). `1` verifies the certificates and removes the warning: with a self-signed certificate mount its CA into the container and point `NODE_EXTRA_CA_CERTS` at it. |
+| `MCLOUD_CA_PEM` | | the certificates of MCloud (PEM) STF trusts besides the public CAs: the entrypoint writes them to a file for `NODE_EXTRA_CA_CERTS`. mcloud-agent passes the pinned self-signed certificate of a farm ([TLS of MCloud](https://github.com/zebrunner/mcloud-agent#tls-of-mcloud)). STF verifies the certificate of MCloud (the storage, the API): a self-signed one without `MCLOUD_CA_PEM` is refused. `NODE_TLS_REJECT_UNAUTHORIZED=0` (not set by the image) turns the verification off, the entrypoint warns about it. |
 
 ### iOS
 

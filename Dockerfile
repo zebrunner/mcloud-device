@@ -108,8 +108,9 @@ ENV \
     # ZeroMQ keepalive against the gray screen after 48 hours (zebrunner/android-device#70, openstf/stf#100)
     ZMQ_TCP_KEEPALIVE=1 \
     ZMQ_TCP_KEEPALIVE_IDLE=600 \
-    # #56 the screenshots of the storage behind a self-signed certificate
-    NODE_TLS_REJECT_UNAUTHORIZED=0 \
+    # the certificates of MCloud STF trusts besides the public CAs (PEM, NODE_EXTRA_CA_CERTS): the self-signed one of a
+    # farm (mcloud-agent); NODE_TLS_REJECT_UNAUTHORIZED stays the default of node, the certificates are verified
+    MCLOUD_CA_PEM="" \
     # iOS: WebDriverAgent
     WDA_HOST=connector \
     WDA_PORT=8100 \
