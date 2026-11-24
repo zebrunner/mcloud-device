@@ -112,7 +112,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 | `STF_PROVIDER_CLEANUP` | `false` | Android: reset the device between the uses (uninstall the applications, reset the accounts). |
 | `STF_PROVIDER_GROUP_TIMEOUT` | `3600` | The timeout in seconds of the automatic release of an inactive device. |
 | `STF_PROVIDER_HEARTBEAT_INTERVAL` | `10000` | The interval in milliseconds of the heartbeat messages. |
-| `STF_PROVIDER_LOCK_ROTATION` | `false` | Android: lock the rotation while the device is used. |
+| `STF_PROVIDER_LOCK_ROTATION` | `false` | Ignored: STF always locks the rotation a user sets and turns a rotated Android device back to portrait when it is released ([zebrunner/stf#1217](https://github.com/zebrunner/stf/pull/1217)). |
 | `STF_PROVIDER_MUTE_MASTER` | `never` | Mute the master volume: `always`, `inuse` or `never`. |
 | `STF_PROVIDER_SCREEN_JPEG_QUALITY` | `30` | The JPEG quality of the screen. |
 | `STF_PROVIDER_SCREEN_PING_INTERVAL` | `30000` | The interval in milliseconds of the pings of the screen WebSocket. |
