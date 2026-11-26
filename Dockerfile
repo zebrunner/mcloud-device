@@ -94,7 +94,11 @@ ENV \
     STF_PROVIDER_MAX_PORT=7410 \
     STF_PROVIDER_CONNECT_PORT="" \
     STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 \
-    STF_PROVIDER_CLEANUP=false \
+    # the cleanup between the uses of the device (README.md#environment-variables): the helpers of the farm installed
+    # after the start stay (the server and the settings of Appium, the agent and the apps of the MDM)
+    STF_PROVIDER_CLEANUP=true \
+    STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" \
+    CLEANUP_KEEP_PACKAGES="" \
     STF_PROVIDER_GROUP_TIMEOUT=3600 \
     STF_PROVIDER_HEARTBEAT_INTERVAL=10000 \
     STF_PROVIDER_LOCK_ROTATION=false \

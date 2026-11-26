@@ -308,6 +308,23 @@ socketProtocol="ws"
 if [[ "$PUBLIC_IP_PROTOCOL" == "https" ]]; then
   socketProtocol="wss"
 fi
+# The cleanup between the uses of the device (README.md#environment-variables): STF_PROVIDER_CLEANUP turns it on, the
+# apps of STF_PROVIDER_CLEANUP_KEEP_PACKAGES (the helpers of the farm) and of CLEANUP_KEEP_PACKAGES (the ones of the host)
+# stay. The provider of Android reads both STF_PROVIDER_* as its options, ios-device gets them as its arguments. Before
+# the unset of the empty STF_PROVIDER_* below, which would drop a keep list made of CLEANUP_KEEP_PACKAGES only
+if [[ -n "${CLEANUP_KEEP_PACKAGES:-}" ]]; then
+  export STF_PROVIDER_CLEANUP_KEEP_PACKAGES="${STF_PROVIDER_CLEANUP_KEEP_PACKAGES:+${STF_PROVIDER_CLEANUP_KEEP_PACKAGES},}${CLEANUP_KEEP_PACKAGES}"
+fi
+iosCleanupArgs=(--no-cleanup)
+if [[ "${STF_PROVIDER_CLEANUP:-}" == true ]]; then
+  iosCleanupArgs=(--cleanup)
+  # read splits without the expansion of the file names: the patterns keep their *
+  read -r -a keepPackages <<< "${STF_PROVIDER_CLEANUP_KEEP_PACKAGES//,/ }"
+  if [[ ${#keepPackages[@]} -gt 0 ]]; then
+    iosCleanupArgs+=(--cleanup-keep-packages "${keepPackages[@]}")
+  fi
+fi
+
 # The provider of Android reads the STF_PROVIDER_* variables as its options: an empty one would replace the default of its
 # option and an unknown one (the dealers of iOS) stops it, so they are removed from its environment
 unsetVars=(-u STF_PROVIDER_CONNECT_APP_DEALER -u STF_PROVIDER_CONNECT_DEV_DEALER)
@@ -348,7 +365,8 @@ else
     --connect-dev-dealer "$STF_PROVIDER_CONNECT_DEV_DEALER"
     --connect-url-pattern "$connectUrlPattern"
     --wda-host "$WDA_HOST"
-    --wda-port "$WDA_PORT")
+    --wda-port "$WDA_PORT"
+    "${iosCleanupArgs[@]}")
 fi
 
 logger "INFO" "Starting STF ${PLATFORM_NAME}: ${stfCommand[*]}"
