@@ -320,9 +320,13 @@ check "reachable services are not awaited" "" "$(waits)"
 
 scenario ios
 run_entrypoint
-for host in push-host:7270 sub-host:7250 app-host:7160 dev-host:7260; do
+for host in push-host:7270 sub-host:7250; do
   check_contains "iOS: ${host} is checked" "TCP:${host}" "$(calls socat)"
 done
+# the dealers are options of ios-device, never awaited: MCloud does not publish them
+check_not_contains "iOS: the dealers are not awaited" "app-host" "$(calls socat)"
+check_not_contains "iOS: the dev dealer is not awaited" "dev-host" "$(calls socat)"
+check_contains "iOS: the dealers still reach ios-device" "--connect-app-dealer|tcp://app-host:7160" "$(started)"
 
 scenario
 FAKE_FLAKY=sub-host
