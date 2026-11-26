@@ -153,7 +153,7 @@ The provider of Android reads every `STF_PROVIDER_*` variable as its option (`ST
 ## Startup
 
 1. The configuration is validated (see [Configuration](#configuration)).
-2. The STF services are awaited: push, sub and for iOS the dealers. Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds, then the container is restarted (`STF_SERVICES_WAIT_RESTARTS` times in a row); after the restarts they are awaited as long as they are down.
+2. The STF services are awaited: push and sub (the dealers of iOS are options of `ios-device`, which does not connect to them: they are checked, not awaited). Every unreachable one is checked again every `STF_SERVICES_WAIT_RETRY` seconds, up to `STF_SERVICES_WAIT_TIMEOUT` seconds, then the container is restarted (`STF_SERVICES_WAIT_RESTARTS` times in a row); after the restarts they are awaited as long as they are down.
 3. iOS: `/var/run/usbmuxd` is forwarded to `USBMUXD_SOCKET_ADDRESS` (socat, skipped with `WIRELESS=true`), then WebDriverAgent is awaited.
 4. The screen WebSocket is broadcast to `BROADCAST_PORT`; websocat is started again a second after it exits.
 5. STF starts: `stf provider` for Android, `stf ios-device` for iOS. The entrypoint passes `SIGTERM` of `docker stop` to STF, so it stops gracefully, and exits with the exit code of STF. For iOS the status of WebDriverAgent is logged after STF (#184).
