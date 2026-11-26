@@ -70,10 +70,12 @@ jobs:
           name: junit-docker
           path: ${{ runner.temp }}/junit/
 
-  # the image of a merge into develop to public.ecr.aws after all the checks (CONVENTIONS.md#versions)
+  # the image of a merge into develop to public.ecr.aws after all the checks (CONVENTIONS.md#versions); a manual run of
+  # develop publishes too: the image is built on the develop image of STF, so a new STF reaches the devices without a
+  # change of this repository (gh workflow run ci.yml --ref develop)
   publish:
     needs: [lint, tests, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/develop'
     permissions:
       contents: read
       id-token: write
