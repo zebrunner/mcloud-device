@@ -74,7 +74,7 @@ exit 0'
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
   STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY \
-  NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED; do
+  NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED STF_PROVIDER_CLEANUP STF_PROVIDER_CLEANUP_KEEP_PACKAGES; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -110,7 +110,8 @@ scenario() {
   export REMOTE_CONNECT_HOST=""
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
   export STF_PROVIDER_CONNECT_PORT=""
-  export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=false STF_PROVIDER_GROUP_TIMEOUT=3600
+  export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=true STF_PROVIDER_GROUP_TIMEOUT=3600
+  export STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" CLEANUP_KEEP_PACKAGES=""
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
   export STF_PROVIDER_SCREEN_JPEG_QUALITY=30 STF_PROVIDER_SCREEN_PING_INTERVAL=30000 STF_PROVIDER_SCREEN_RESET=false
   export STF_PROVIDER_VNC_INITIAL_SIZE=600x800 STF_PROVIDER_VNC_PORT=5900 BROADCAST_PORT=2223
@@ -622,8 +623,44 @@ section "STF of iOS"
 scenario ios
 run_entrypoint
 check "the ios-device options" \
-  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100" \
+  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server*|io.appium.settings|com.hmdm.*" \
   "$(started)"
+
+section "the cleanup between the uses"
+scenario
+run_entrypoint
+stf_env="$(calls env)"
+check_contains "Android: the provider gets the cleanup" "STF_PROVIDER_CLEANUP=true" "$stf_env"
+check_contains "Android: the provider gets the keep list of the farm" \
+  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" "$stf_env"
+scenario
+CLEANUP_KEEP_PACKAGES="com.example.preinstalled,com.example.tools.*"
+run_entrypoint
+check_contains "Android: the keep list of the host is added" \
+  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*,com.example.preinstalled,com.example.tools.*" \
+  "$(calls env)"
+scenario
+STF_PROVIDER_CLEANUP_KEEP_PACKAGES=""
+CLEANUP_KEEP_PACKAGES="com.example.preinstalled"
+run_entrypoint
+check_contains "Android: a keep list of the host alone is not removed as an empty option" \
+  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=com.example.preinstalled" "$(calls env)"
+scenario ios
+CLEANUP_KEEP_PACKAGES="com.example.preinstalled"
+run_entrypoint
+check_contains "iOS: the keep lists are arguments" \
+  "|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server*|io.appium.settings|com.hmdm.*|com.example.preinstalled" "$(started)"
+scenario ios
+STF_PROVIDER_CLEANUP=false
+run_entrypoint
+check_contains "iOS: STF_PROVIDER_CLEANUP=false is --no-cleanup" "|--wda-port|8100|--no-cleanup" "$(started)"
+check_not_contains "iOS: no keep list without the cleanup" "--cleanup-keep-packages" "$(started)"
+scenario ios
+pushd "$WORK" > /dev/null || exit 1
+touch com.hmdm.decoy io.appium.settings.decoy
+run_entrypoint
+popd > /dev/null || exit 1
+check_contains "iOS: the patterns keep their * next to matching files" "|io.appium.settings|com.hmdm.*" "$(started)"
 
 scenario ios
 REMOTE_CONNECT_HOST=mcloud.example.com
