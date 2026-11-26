@@ -64,12 +64,12 @@ untraced() {
   return "$status"
 }
 
-# validateSecrets: the required variables (requiredVars, stfServices), the node token and the CURVE keys, run untraced
+# validateSecrets: the required variables (requiredVars, stfEndpoints), the node token and the CURVE keys, run untraced
 # (secrets); the errors do not show the values
 # it is called by untraced
 # shellcheck disable=SC2329
 validateSecrets() {
-  for var in "${requiredVars[@]}" "${stfServices[@]}"; do
+  for var in "${requiredVars[@]}" "${stfEndpoints[@]}"; do
     if [[ -z "${!var}" ]]; then
       configError "${var} is required but empty or unset."
     fi
@@ -128,14 +128,17 @@ requiredVars=(STF_PROVIDER_PUBLIC_IP STF_NODE_TOKEN STF_ZMQ_CURVE_SERVER_PUBLIC_
 # in base64url
 nodeTokenPattern='^mcn1\.[a-z0-9][a-z0-9-]{0,39}\.[A-Za-z0-9_-]{43}$'
 
-# the STF services of tcp://<host>:<port>, they are awaited before the start
+# the STF services of tcp://<host>:<port>, they are awaited before the start: the PUSH and the SUB of the triproxy of the
+# devices only. The dealers are options of stf ios-device it does not connect to, and MCloud does not publish them (STF
+# refuses the keys of the nodes there): they are required and checked, never awaited
 stfServices=(STF_PROVIDER_CONNECT_PUSH STF_PROVIDER_CONNECT_SUB)
+stfEndpoints=("${stfServices[@]}")
 if [[ "$PLATFORM_NAME" == "ios" ]]; then
   requiredVars+=(DEVICE_UDID STF_PROVIDER_NAME)
-  stfServices+=(STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER)
+  stfEndpoints+=(STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER)
 fi
 untraced validateSecrets
-for var in "${stfServices[@]}"; do
+for var in "${stfEndpoints[@]}"; do
   if [[ -n "${!var}" ]] && ! parseTcpUrl "${!var}"; then
     configError "${var} must be tcp://<host>:<port>, but it is '${!var}'."
   fi
