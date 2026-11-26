@@ -623,7 +623,7 @@ section "STF of iOS"
 scenario ios
 run_entrypoint
 check "the ios-device options" \
-  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.facebook.WebDriverAgentRunner.xctrunner" \
+  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager" \
   "$(started)"
 
 section "the cleanup between the uses"
@@ -649,7 +649,7 @@ scenario ios
 CLEANUP_KEEP_PACKAGES="com.example.preinstalled"
 run_entrypoint
 check_contains "iOS: the keep lists are arguments" \
-  "|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.preinstalled|com.facebook.WebDriverAgentRunner.xctrunner" "$(started)"
+  "|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.preinstalled" "$(started)"
 scenario ios
 STF_PROVIDER_CLEANUP=false
 run_entrypoint
@@ -661,12 +661,16 @@ pushd "$WORK" > /dev/null || exit 1
 touch com.example.tools.decoy io.appium.settings.decoy
 run_entrypoint
 popd > /dev/null || exit 1
-check_contains "iOS: the patterns keep their * next to matching files" "|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.tools.*|" "$(started)"
+check_contains "iOS: the patterns keep their * next to matching files" "|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.tools.*" "$(started)"
 scenario ios
 WDA_BUNDLEID="com.example.WebDriverAgentRunner.xctrunner"
 run_entrypoint
 check_contains "iOS: WebDriverAgent of WDA_BUNDLEID stays" "|com.hmdm.pager|com.example.WebDriverAgentRunner.xctrunner" "$(started)"
 check_not_contains "iOS: no other WebDriverAgent" "com.facebook.WebDriverAgentRunner" "$(started)"
+scenario ios
+run_entrypoint
+check_not_contains "iOS: no WebDriverAgent in the keep list without WDA_BUNDLEID (STF keeps any *.xctrunner)" \
+  "xctrunner" "$(started)"
 
 scenario ios
 REMOTE_CONNECT_HOST=mcloud.example.com

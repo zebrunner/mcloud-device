@@ -320,12 +320,14 @@ if [[ "${STF_PROVIDER_CLEANUP:-}" == true ]]; then
   iosCleanupArgs=(--cleanup)
   # read splits without the expansion of the file names: the patterns keep their *
   read -r -a keepPackages <<< "${STF_PROVIDER_CLEANUP_KEEP_PACKAGES//,/ }"
-  # iOS: WebDriverAgent of the device stays, by its exact bundle id (WDA_BUNDLEID of the connector)
-  wdaBundleId="${WDA_BUNDLEID:-com.facebook.WebDriverAgentRunner.xctrunner}"
-  if [[ "$wdaBundleId" =~ ^[A-Za-z0-9.-]+$ ]]; then
-    keepPackages+=("$wdaBundleId")
-  else
-    echo "WARN: WDA_BUNDLEID is not a bundle identifier, the cleanup keeps no WebDriverAgent by it: '$wdaBundleId'" >&2
+  # iOS: WebDriverAgent of the device stays by its exact bundle id, the WDA_BUNDLEID mcloud-agent passes (the one of
+  # the connector); without it (an older mcloud-agent) STF keeps any *.xctrunner
+  if [[ -n "${WDA_BUNDLEID:-}" ]]; then
+    if [[ "$WDA_BUNDLEID" =~ ^[A-Za-z0-9.-]+$ ]]; then
+      keepPackages+=("$WDA_BUNDLEID")
+    else
+      echo "WARN: WDA_BUNDLEID is not a bundle identifier, the cleanup keeps any *.xctrunner: '$WDA_BUNDLEID'" >&2
+    fi
   fi
   if [[ ${#keepPackages[@]} -gt 0 ]]; then
     iosCleanupArgs+=(--cleanup-keep-packages "${keepPackages[@]}")
