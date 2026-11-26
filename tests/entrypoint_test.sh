@@ -111,11 +111,11 @@ scenario() {
   export STF_PROVIDER_ADB_HOST=connector STF_PROVIDER_ADB_PORT=5037 STF_PROVIDER_MIN_PORT=7404 STF_PROVIDER_MAX_PORT=7410
   export STF_PROVIDER_CONNECT_PORT=""
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=true STF_PROVIDER_GROUP_TIMEOUT=3600
-  export STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" CLEANUP_KEEP_PACKAGES=""
+  export STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager" CLEANUP_KEEP_PACKAGES=""
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
   export STF_PROVIDER_SCREEN_JPEG_QUALITY=30 STF_PROVIDER_SCREEN_PING_INTERVAL=30000 STF_PROVIDER_SCREEN_RESET=false
   export STF_PROVIDER_VNC_INITIAL_SIZE=600x800 STF_PROVIDER_VNC_PORT=5900 BROADCAST_PORT=2223
-  export WDA_HOST=connector WDA_PORT=8100 MJPEG_PORT=8101 WDA_WAIT_TIMEOUT=30
+  export WDA_HOST=connector WDA_PORT=8100 MJPEG_PORT=8101 WDA_WAIT_TIMEOUT=30 WDA_BUNDLEID=""
   export USBMUXD_SOCKET_ADDRESS=usbmuxd-host:2222 USBMUXD_SOCKET_TIMEOUT=60 USBMUXD_SOCKET_PERIOD=5
   export LOGGER_LEVEL=DEBUG
   # the stubs
@@ -623,7 +623,7 @@ section "STF of iOS"
 scenario ios
 run_entrypoint
 check "the ios-device options" \
-  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server*|io.appium.settings|com.hmdm.*" \
+  "ios-device|--serial|00008030-TEST|--device-name|My Phone|--host|provider-host|--screen-port|7404|--connect-port|8101|--provider|mcloud-linux|--public-ip|stf.example.com|--group-timeout|3600|--storage-url|http://stf.example.com:80/|--screen-jpeg-quality|30|--screen-ping-interval|30000|--screen-ws-url-pattern|ws://stf.example.com:80/d/provider-host/00008030-TEST/7404/|--boot-complete-timeout|60000|--heartbeat-interval|10000|--mute-master|never|--connect-push|tcp://push-host:7270|--connect-sub|tcp://sub-host:7250|--connect-app-dealer|tcp://app-host:7160|--connect-dev-dealer|tcp://dev-host:7260|--connect-url-pattern|provider-host:<%= publicPort %>|--wda-host|connector|--wda-port|8100|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.facebook.WebDriverAgentRunner.xctrunner" \
   "$(started)"
 
 section "the cleanup between the uses"
@@ -632,12 +632,12 @@ run_entrypoint
 stf_env="$(calls env)"
 check_contains "Android: the provider gets the cleanup" "STF_PROVIDER_CLEANUP=true" "$stf_env"
 check_contains "Android: the provider gets the keep list of the farm" \
-  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" "$stf_env"
+  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager" "$stf_env"
 scenario
 CLEANUP_KEEP_PACKAGES="com.example.preinstalled,com.example.tools.*"
 run_entrypoint
 check_contains "Android: the keep list of the host is added" \
-  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*,com.example.preinstalled,com.example.tools.*" \
+  "STF_PROVIDER_CLEANUP_KEEP_PACKAGES=io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager,com.example.preinstalled,com.example.tools.*" \
   "$(calls env)"
 scenario
 STF_PROVIDER_CLEANUP_KEEP_PACKAGES=""
@@ -649,18 +649,24 @@ scenario ios
 CLEANUP_KEEP_PACKAGES="com.example.preinstalled"
 run_entrypoint
 check_contains "iOS: the keep lists are arguments" \
-  "|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server*|io.appium.settings|com.hmdm.*|com.example.preinstalled" "$(started)"
+  "|--cleanup|--cleanup-keep-packages|io.appium.uiautomator2.server|io.appium.uiautomator2.server.test|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.preinstalled|com.facebook.WebDriverAgentRunner.xctrunner" "$(started)"
 scenario ios
 STF_PROVIDER_CLEANUP=false
 run_entrypoint
 check_contains "iOS: STF_PROVIDER_CLEANUP=false is --no-cleanup" "|--wda-port|8100|--no-cleanup" "$(started)"
 check_not_contains "iOS: no keep list without the cleanup" "--cleanup-keep-packages" "$(started)"
 scenario ios
+CLEANUP_KEEP_PACKAGES="com.example.tools.*"
 pushd "$WORK" > /dev/null || exit 1
-touch com.hmdm.decoy io.appium.settings.decoy
+touch com.example.tools.decoy io.appium.settings.decoy
 run_entrypoint
 popd > /dev/null || exit 1
-check_contains "iOS: the patterns keep their * next to matching files" "|io.appium.settings|com.hmdm.*" "$(started)"
+check_contains "iOS: the patterns keep their * next to matching files" "|io.appium.settings|com.hmdm.launcher|com.hmdm.pager|com.example.tools.*|" "$(started)"
+scenario ios
+WDA_BUNDLEID="com.example.WebDriverAgentRunner.xctrunner"
+run_entrypoint
+check_contains "iOS: WebDriverAgent of WDA_BUNDLEID stays" "|com.hmdm.pager|com.example.WebDriverAgentRunner.xctrunner" "$(started)"
+check_not_contains "iOS: no other WebDriverAgent" "com.facebook.WebDriverAgentRunner" "$(started)"
 
 scenario ios
 REMOTE_CONNECT_HOST=mcloud.example.com

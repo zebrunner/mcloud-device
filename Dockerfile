@@ -95,9 +95,10 @@ ENV \
     STF_PROVIDER_CONNECT_PORT="" \
     STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 \
     # the cleanup between the uses of the device (README.md#environment-variables): the helpers of the farm installed
-    # after the start stay (the server and the settings of Appium, the agent and the apps of the MDM)
+    # after the start stay (the server and the settings of Appium, the agent and the pager of the MDM), by their exact
+    # ids: a prefix would keep any app of a user named after it
     STF_PROVIDER_CLEANUP=true \
-    STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server*,io.appium.settings,com.hmdm.*" \
+    STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager" \
     CLEANUP_KEEP_PACKAGES="" \
     STF_PROVIDER_GROUP_TIMEOUT=3600 \
     STF_PROVIDER_HEARTBEAT_INTERVAL=10000 \
