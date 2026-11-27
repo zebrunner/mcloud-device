@@ -335,6 +335,19 @@ if [[ "${STF_PROVIDER_CLEANUP:-}" == true ]]; then
   if [[ ${#keepPackages[@]} -gt 0 ]]; then
     iosCleanupArgs+=(--cleanup-keep-packages "${keepPackages[@]}")
   fi
+  # the reset of the state after the apps (STF ZEBRUNNER.md#cleanup-between-uses): the steps of STF_PROVIDER_CLEANUP_RESET
+  # (one list for both platforms, unset: the default of STF) and the profiles of CLEANUP_KEEP_PROFILES that stay
+  # besides the ones of the farm
+  resetList="${STF_PROVIDER_CLEANUP_RESET:-}"
+  read -r -a resetSteps <<< "${resetList//,/ }"
+  if [[ ${#resetSteps[@]} -gt 0 ]]; then
+    iosCleanupArgs+=(--cleanup-reset "${resetSteps[@]}")
+  fi
+  keepProfileList="${CLEANUP_KEEP_PROFILES:-}"
+  read -r -a keepProfiles <<< "${keepProfileList//,/ }"
+  if [[ ${#keepProfiles[@]} -gt 0 ]]; then
+    iosCleanupArgs+=(--cleanup-keep-profiles "${keepProfiles[@]}")
+  fi
 fi
 
 # The provider of Android reads the STF_PROVIDER_* variables as its options: an empty one would replace the default of its

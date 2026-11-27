@@ -74,7 +74,8 @@ exit 0'
 stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
   STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY \
-  NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED STF_PROVIDER_CLEANUP STF_PROVIDER_CLEANUP_KEEP_PACKAGES; do
+  NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED STF_PROVIDER_CLEANUP STF_PROVIDER_CLEANUP_KEEP_PACKAGES \
+  STF_PROVIDER_CLEANUP_RESET STF_PROVIDER_CLEANUP_KEEP_WIFI; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -112,6 +113,7 @@ scenario() {
   export STF_PROVIDER_CONNECT_PORT=""
   export STF_PROVIDER_BOOT_COMPLETE_TIMEOUT=60000 STF_PROVIDER_CLEANUP=true STF_PROVIDER_GROUP_TIMEOUT=3600
   export STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager" CLEANUP_KEEP_PACKAGES=""
+  export STF_PROVIDER_CLEANUP_RESET="" STF_PROVIDER_CLEANUP_KEEP_WIFI="" CLEANUP_KEEP_PROFILES=""
   export STF_PROVIDER_HEARTBEAT_INTERVAL=10000 STF_PROVIDER_LOCK_ROTATION=false STF_PROVIDER_MUTE_MASTER=never
   export STF_PROVIDER_SCREEN_JPEG_QUALITY=30 STF_PROVIDER_SCREEN_PING_INTERVAL=30000 STF_PROVIDER_SCREEN_RESET=false
   export STF_PROVIDER_VNC_INITIAL_SIZE=600x800 STF_PROVIDER_VNC_PORT=5900 BROADCAST_PORT=2223
@@ -675,6 +677,38 @@ scenario ios
 run_entrypoint
 check_not_contains "iOS: no WebDriverAgent in the keep list without WDA_BUNDLEID (STF keeps any *.xctrunner)" \
   "xctrunner" "$(started)"
+
+section "the reset of the state after the apps"
+scenario
+run_entrypoint
+check_contains "Android: no steps by default (the default of STF)" "STF_PROVIDER_CLEANUP_RESET=<unset>" "$(calls env)"
+check_contains "Android: no Wi-Fi keep list by default" "STF_PROVIDER_CLEANUP_KEEP_WIFI=<unset>" "$(calls env)"
+scenario
+STF_PROVIDER_CLEANUP_RESET="proxy,wifi,media"
+STF_PROVIDER_CLEANUP_KEEP_WIFI="Farm Wi-Fi,Lab"
+run_entrypoint
+check_contains "Android: the provider gets the steps" "STF_PROVIDER_CLEANUP_RESET=proxy,wifi,media" "$(calls env)"
+check_contains "Android: the provider gets the SSIDs with their spaces" \
+  "STF_PROVIDER_CLEANUP_KEEP_WIFI=Farm Wi-Fi,Lab" "$(calls env)"
+scenario ios
+run_entrypoint
+check_not_contains "iOS: the default steps of STF" "--cleanup-reset" "$(started)"
+check_not_contains "iOS: no profile keep list by default" "--cleanup-keep-profiles" "$(started)"
+scenario ios
+STF_PROVIDER_CLEANUP_RESET="proxy, profiles"
+CLEANUP_KEEP_PROFILES="com.example.vpn,com.example.certs.*"
+run_entrypoint
+check_contains "iOS: the steps and the profiles are arguments" \
+  "|--cleanup-reset|proxy|profiles|--cleanup-keep-profiles|com.example.vpn|com.example.certs.*" "$(started)"
+scenario ios
+STF_PROVIDER_CLEANUP_RESET=none
+run_entrypoint
+check_contains "iOS: none" "|--cleanup-reset|none" "$(started)"
+scenario ios
+STF_PROVIDER_CLEANUP=false
+STF_PROVIDER_CLEANUP_RESET=profiles
+run_entrypoint
+check_not_contains "iOS: no reset without the cleanup" "--cleanup-reset" "$(started)"
 
 scenario ios
 REMOTE_CONNECT_HOST=mcloud.example.com
