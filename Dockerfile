@@ -120,6 +120,8 @@ ENV \
     # the certificates of MCloud STF trusts besides the public CAs (PEM, NODE_EXTRA_CA_CERTS): the self-signed one of a
     # farm (mcloud-agent); NODE_TLS_REJECT_UNAUTHORIZED stays the default of node, the certificates are verified
     MCLOUD_CA_PEM="" \
+    # the pin of the TLS key of MCloud (mcloud-agent): STF sends the node token to the storage of that key only
+    MCLOUD_TLS_PIN="" \
     # iOS: WebDriverAgent
     WDA_HOST=connector \
     WDA_PORT=8100 \
