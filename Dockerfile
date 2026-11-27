@@ -100,6 +100,10 @@ ENV \
     STF_PROVIDER_CLEANUP=true \
     STF_PROVIDER_CLEANUP_KEEP_PACKAGES="io.appium.uiautomator2.server,io.appium.uiautomator2.server.test,io.appium.settings,com.hmdm.launcher,com.hmdm.pager" \
     CLEANUP_KEEP_PACKAGES="" \
+    # the reset of the state after the apps (README.md#environment-variables): empty, the steps of STF by default
+    STF_PROVIDER_CLEANUP_RESET="" \
+    STF_PROVIDER_CLEANUP_KEEP_WIFI="" \
+    CLEANUP_KEEP_PROFILES="" \
     STF_PROVIDER_GROUP_TIMEOUT=3600 \
     STF_PROVIDER_HEARTBEAT_INTERVAL=10000 \
     STF_PROVIDER_LOCK_ROTATION=false \
