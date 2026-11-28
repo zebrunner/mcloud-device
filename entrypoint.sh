@@ -120,6 +120,11 @@ fi
 if [[ -n "$MCLOUD_CA_PEM" && "$MCLOUD_CA_PEM" != *"-----BEGIN CERTIFICATE-----"* ]]; then
   configError "MCLOUD_CA_PEM must be certificates in PEM, the ones of MCloud to trust."
 fi
+# the pins of curl (base64 of the SHA-256 of the public key), separated by ';' or ',', with or without sha256//
+pinPattern='(sha256//)?[A-Za-z0-9+/]{43}='
+if [[ -n "$MCLOUD_TLS_PIN" && ! "$MCLOUD_TLS_PIN" =~ ^${pinPattern}([;,]\ *${pinPattern})*$ ]]; then
+  configError "MCLOUD_TLS_PIN must be pins of the TLS key of MCloud (base64 SHA-256, as curl --pinnedpubkey takes them)."
+fi
 
 # the node token (the device binding and the storage) and the CURVE keys of ZeroMQ are read by STF itself, the provider
 # and its device processes inherit them: the values are neither logged nor traced
@@ -303,8 +308,13 @@ if [[ -n "$MCLOUD_CA_PEM" ]]; then
   export NODE_EXTRA_CA_CERTS=/tmp/zebrunner/mcloud-ca.pem
   logger "INFO" "STF trusts the certificate of MCloud of MCLOUD_CA_PEM."
 fi
+# the pin of the TLS key of MCloud (MCLOUD_TLS_PIN of mcloud-agent): STF reads it itself, the requests with the node token
+# go only to that key, whatever the chain, the name and NODE_TLS_REJECT_UNAUTHORIZED
+if [[ -n "$MCLOUD_TLS_PIN" ]]; then
+  logger "INFO" "STF sends the node token to the pinned TLS key of MCloud only (MCLOUD_TLS_PIN)."
+fi
 if [[ "$NODE_TLS_REJECT_UNAUTHORIZED" == "0" ]]; then
-  logger "WARN" "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud."
+  logger "WARN" "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud${MCLOUD_TLS_PIN:+ (the requests with the node token check its pinned key)}."
 fi
 storageUrl="${PUBLIC_IP_PROTOCOL}://${STF_PROVIDER_PUBLIC_IP}:${PUBLIC_IP_PORT}/"
 socketProtocol="ws"

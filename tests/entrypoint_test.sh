@@ -75,7 +75,7 @@ stub stf '(IFS="|"; echo "stf|$*") >> "$FAKE_WORK/calls.log"
 for var in STF_NODE_TOKEN STF_PROVIDER_HOST STF_PROVIDER_CONNECT_APP_DEALER STF_PROVIDER_CONNECT_DEV_DEALER \
   STF_PROVIDER_CONNECT_PORT STF_PROVIDER_DEVICE_NAME STF_PROVIDER_NAME STF_PROVIDER_MIN_PORT STF_ZMQ_CURVE_SERVER_PUBLIC_KEY STF_ZMQ_CURVE_SECRET_KEY \
   NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED STF_PROVIDER_CLEANUP STF_PROVIDER_CLEANUP_KEEP_PACKAGES \
-  STF_PROVIDER_CLEANUP_RESET STF_PROVIDER_CLEANUP_KEEP_WIFI; do
+  STF_PROVIDER_CLEANUP_RESET STF_PROVIDER_CLEANUP_KEEP_WIFI MCLOUD_TLS_PIN; do
   echo "env|${var}=${!var-<unset>}" >> "$FAKE_WORK/calls.log"
 done
 if [[ "$FAKE_STF" == hang ]]; then
@@ -98,7 +98,7 @@ scenario() {
   rm -rf "${WORK:?}"/zebrunner/* "${WORK:?}"/usbmuxd/* "${WORK}"/*.n
   reset_calls
   # the variables of the previous scenario
-  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT FAKE_SLEEP_HANG MCLOUD_CA_PEM NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED
+  unset DEBUG VERBOSE FAKE_STF FAKE_STF_EXIT FAKE_SLEEP_HANG MCLOUD_CA_PEM NODE_EXTRA_CA_CERTS NODE_TLS_REJECT_UNAUTHORIZED MCLOUD_TLS_PIN
   # the defaults of the Dockerfile
   export PLATFORM_NAME="${1:-android}" DEVICE_UDID=00008030-TEST WIRELESS=false
   export STF_PROVIDER_CONNECT_PUSH=tcp://push-host:7270 STF_PROVIDER_CONNECT_SUB=tcp://sub-host:7250
@@ -624,6 +624,32 @@ scenario
 export NODE_TLS_REJECT_UNAUTHORIZED=0
 run_entrypoint
 check_contains "no verification is a warning" "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud." "$OUT"
+
+section "the pin of the TLS key of MCloud"
+pin="$(printf '%043d' 0 | tr 0 q)="
+scenario
+run_entrypoint
+check_contains "no pin by default" "MCLOUD_TLS_PIN=<unset>" "$(calls env)"
+for value in "$pin" "sha256//${pin}" "${pin};sha256//${pin}" "${pin}, ${pin}"; do
+  scenario
+  export MCLOUD_TLS_PIN="$value"
+  run_entrypoint
+  check "MCLOUD_TLS_PIN '${value}': STF starts" "0" "$STATUS"
+  check_contains "MCLOUD_TLS_PIN '${value}': STF gets it" "MCLOUD_TLS_PIN=${value}" "$(calls env)"
+  check_contains "MCLOUD_TLS_PIN '${value}': it is logged" "STF sends the node token to the pinned TLS key of MCloud only (MCLOUD_TLS_PIN)." "$OUT"
+done
+for value in "not-a-pin" "${pin}x" "sha1//${pin}"; do
+  scenario
+  export MCLOUD_TLS_PIN="$value"
+  run_entrypoint
+  check "MCLOUD_TLS_PIN '${value}' is a configuration error" "0|" "${STATUS}|$(started)"
+  check_contains "MCLOUD_TLS_PIN '${value}': the error" "MCLOUD_TLS_PIN must be pins of the TLS key of MCloud" "$OUT"
+done
+scenario
+export NODE_TLS_REJECT_UNAUTHORIZED=0 MCLOUD_TLS_PIN="$pin"
+run_entrypoint
+check_contains "no verification with a pin: the requests with the token check the key" \
+  "NODE_TLS_REJECT_UNAUTHORIZED=0: STF does not verify the certificate of MCloud (the requests with the node token check its pinned key)." "$OUT"
 
 section "STF of iOS"
 scenario ios
